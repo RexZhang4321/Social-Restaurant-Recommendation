@@ -15,3 +15,9 @@ This is a course project for the class Information Retrieval, which is inspired 
 | 4/7 - 4/12 | For front-end, explore the possibility in building a mobile application, or help with the backend application | Labor load balance |
 | 4/12 - 4/21 | Bridge the front-end and back-end | May new features be added |
 | 4/21 - 4/28 | Report and presentation preparation | Clean code and ready to submit |
+
+## Progress
+
+- *3/24* Read through the whole paper.
+- *3/26* Our group discussed the relations inside the model, and got some intuition.
+- *3/29* Researched the LDA, Gibbs sampling, several distribution and Collaborative Filtering.
