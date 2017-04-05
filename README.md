@@ -22,7 +22,10 @@ This is a course project for the class Information Retrieval, which is inspired 
 - *3/26* Our group discussed the relations inside the model, and got some intuition.
 - *3/29* Researched the LDA, Gibbs sampling, several distribution and Collaborative Filtering.
 
+## Proposal
 
-## Presentation
+http://www.cs.virginia.edu/~hw5x/Course/IR2017/_site/docs/project%20proposal/IR_project_proposal_v2.pdf
+
+## Paper Presentation
 
 https://docs.google.com/presentation/d/1DH6Pcndx1Os3YANGsT2pCKQdVsHzHjzJAeOvWgwWY6w/edit?usp=sharing
