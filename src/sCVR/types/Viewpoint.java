@@ -5,8 +5,9 @@ package sCVR.types;
  */
 public class Viewpoint {
 
-    public String concept;
+    public Concept concept;
     public Topic topic;
     public Sentiment sentiment;
+    public int id;
 
 }

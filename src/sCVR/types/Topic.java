@@ -6,5 +6,6 @@ package sCVR.types;
 public class Topic {
 
     public String topic;
+    public int id;
 
 }

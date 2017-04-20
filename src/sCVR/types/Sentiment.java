@@ -6,5 +6,6 @@ package sCVR.types;
 public class Sentiment {
 
     public int sentiment;
+    public int id;
 
 }

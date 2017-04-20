@@ -8,4 +8,5 @@ public class Item {
 
     public Rating[] ratings;    // ratings assigned by user u to i
     public Review[] reviews;    // reviews from user u
+    public int id;
 }
