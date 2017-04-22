@@ -40,7 +40,8 @@ public class sCVR {
     public Word words[];
     public Sentiment sentiments[];
     public Rating ratings[];
-    HashMap<Integer, HashMap<Integer, Integer>> Nd;   // Nd[u][i], number of words in review[u][i]
+
+    public double pi[][];
 
     // for Eq.3
     // R_{u}
@@ -79,7 +80,7 @@ public class sCVR {
     private int[][] nTopicInViewpoint;  // nTopicInViewpoint[v][z], number of times topic z has been assigned to viewpoint v excluding d
     // n_{v}^{-d}
     private int[] nTopicInViewpointSum; // nTopicInViewpointSum[v], number of topics that have been assigned to viewpoint v excluding d
-    // n_{z, l, v}^{w, -d} TODO: ??? paper may be wrong in this value
+    // n_{z, l, v}^{w, -d}
     private int[][][][] nWordInTopicViewpointSentiment;  // nWordInTopicViewpointSentiment[z][v][l][w], number of word w in certain <z, v, l>
     // n_{z, l, v}^{-d}
     private int[][][] nWordInTopicViewpointSentimentSum; // nWordInTopicViewpointSentimentSum[z][v][l], number of words have been assigned to this z, v, l
@@ -123,8 +124,8 @@ public class sCVR {
         nUserViewpointsRatingSum = new int[U][V];
         nViewpointInItem = new int[I][V];       // init done
         nViewpointInItemSum = new int[I];       // init done
-        thetaUserRatingViewpoint = new double[U][R][V]; // TODO
-        thetaBaseUserRatingViewpoint = new double[U][R][V]; // TODO
+        thetaUserRatingViewpoint = new double[U][R][V]; // init done DOUBT
+        thetaBaseUserRatingViewpoint = new double[U][R][V]; // init done DOUBT
         nViewpointInReview = new int[V];    // init done
         nViewpointInReviewSum = RV;         // init done
         nConceptInViewpoint = new int[V][E];    // init done
@@ -136,6 +137,8 @@ public class sCVR {
         nWordInTopicViewpoint = new int[K][V];  // init done
         nWordJ2X = new int[N][X];   // init done
         nWordJ2XSum = new int[N];   // init done
+
+        pi = new double[I][V];
 
         Viewpoint tmpReviewViewpoint;
         Viewpoint tmpRatingViewpoint;
@@ -169,7 +172,9 @@ public class sCVR {
             }
             for (Rating r : ratings) {
                 for (Viewpoint v : viewpoints) {
-                    // TODO
+                    // we assume uniform distribution at the very beginning
+                    // TODO NOT SURE WHETHER THIS IS CORRECT
+                    thetaBaseUserRatingViewpoint[u.id][r.val][v.id] = thetaUserRatingViewpoint[u.id][r.val][v.id] = 1 / (R * V);
                 }
             }
         }
@@ -225,6 +230,18 @@ public class sCVR {
 
     private void doEStep() {
         for (int u = 0; u < U; u++) {
+            // Compute Eq.4 to get the updated user-rating-viewpoint distribution
+            // Since for current user, we only need to update his thetaUserRatingViewpoint once with his social relation
+            // we assume trusted value is either 1 or 0
+            User[] friends = users[u].friends;
+            int nFriends = friends.length;
+            for (User u0 : friends) {
+                for (int row = 0; row < R; row++) {
+                    for (int col = 0; col < V; col++) {
+                        thetaUserRatingViewpoint[u][row][col] += thetaUserRatingViewpoint[u0.id][row][col] / nFriends;
+                    }
+                }
+            }
             for (int i = 0; i < I; i++) {
                 // --------------- draw f_{u, i} = y from Eq.3 ---------------
                 Review oldReview = Review.reviewDocs.get(u).get(i);
@@ -239,17 +256,7 @@ public class sCVR {
                 // excluding item i
                 nUserViewpointsRating[u][oldViewpoint.id][oldRating]--;
                 nUserViewpointsRatingSum[u][oldViewpoint.id]--;
-                // Compute Eq.4 to get the updated user-rating-viewpoint distribution
-                // we assume trusted value is either 1 or 0
-                User[] friends = users[u].friends;
-                int nFriends = friends.length;
-                for (User u0 : friends) {
-                    for (int row = 0; row < R; row++) {
-                        for (int col = 0; col < V; col++) {
-                            thetaUserRatingViewpoint[u][row][col] += thetaUserRatingViewpoint[u0.id][row][col] / nFriends;
-                        }
-                    }
-                }
+
                 // Compute Eq.3 && sampling
                 double[] p = new double[V];
                 for (int v = 0; v < V; v++) {
@@ -259,7 +266,7 @@ public class sCVR {
                             ((nRatingViewpointInItem[i][v] + nViewpointInItem[i][v] + alpha) /
                                     (nRatingViewpointInItemSum[i] + nViewpointInItemSum[i] + V * alpha));
                 }
-                for (int v = 0; v < V; v++) {
+                for (int v = 1; v < V; v++) {
                     p[v] += p[v - 1];
                 }
                 double sampleVPProb = rnd.nextDouble() * p[V - 1];
@@ -315,7 +322,7 @@ public class sCVR {
                     }
                     p[v] = viewpointPart * conceptPart * topicPart * sentimentWordPart;
                 }
-                for (int v = 0; v < V; v++) {
+                for (int v = 1; v < V; v++) {
                     p[v] += p[v - 1];
                 }
                 sampleVPProb = rnd.nextDouble() * p[V - 1];
@@ -341,7 +348,9 @@ public class sCVR {
                 }
                 oldReview.v = viewpoints[newViewpoint];
 
-                for (Word w : oldReview.words) {
+                for (int wid = 0; wid < oldReview.words.length; wid++) {
+                    Word w = oldReview.words[wid];
+                    Word wNext = (wid == oldReview.words.length - 1 ? w : oldReview.words[wid + 1]);
                     // --------------- draw <z_j, l_j, x_j> from Eq.6 ---------------
                     // excluding word w_j
                     nTopicInViewpoint[newViewpoint][w.z.id]--;
@@ -351,16 +360,55 @@ public class sCVR {
                     nWordJ2X[w.id][w.x]--;
                     nWordJ2XSum[w.id]--;
 
+                    // Compute Eq.6 or Eq.7 and sampling
                     double part1, part2, part3, part4;
-
-                    if (w.x == 0) {
-                        //part1 = (nTopicInViewpoint) / ();
-                    } else {
-
+                    double[][][] wordP = new double[K][L][X];
+                    double accWordP = 0.0;
+                    for (int z = 0; z < K; z++) {
+                        for (int l = 0; l < L; l++) {
+                            for (int x = 0; x < X; x++) {
+                                part1 = (nTopicInViewpoint[newViewpoint][z] + chi) /
+                                        (nTopicInViewpointSum[newViewpoint] + K * chi);
+                                part2 = (nWordInTopicViewpointSentiment[z][newViewpoint][l][w.id] + beta) /
+                                        (nWordInTopicViewpointSentimentSum[z][newViewpoint][l] + N * beta);
+                                part3 = (nWordJ2X[w.id][x] + tau[x]) / (nWordJ2XSum[w.id] + 1); // assume sum(tau) == 1
+                                if (w.x == 0) {
+                                    part4 = (nWordInTopicViewpointSentimentSum[z][newViewpoint][l] + eta[l]) /
+                                            (nWordInTopicViewpointSentimentSum[z][newViewpoint][0] +
+                                                    nWordInTopicViewpointSentimentSum[z][newViewpoint][1] +
+                                                    nWordInTopicViewpointSentimentSum[z][newViewpoint][2] + 1);
+                                } else {
+                                    if (wNext.x == w.x) {
+                                        part4 = (nWordJ2X[wNext.id][wNext.x] + 1 + tau[wNext.x]) /
+                                                (nWordJ2XSum[wNext.id] + 1 + 1);
+                                    } else {
+                                        part4 = (nWordJ2X[wNext.id][wNext.x] + 0 + tau[wNext.x]) /
+                                                (nWordJ2XSum[wNext.id] + 1 + 1);
+                                    }
+                                }
+                                accWordP += part1 * part2 * part3 * part4;
+                                wordP[z][l][x] = accWordP;
+                            }
+                        }
                     }
-                    // TODO: how to sample 3 random variables???
-
-                    // if x_j then ... else ...
+                    double sampleWordProb = accWordP * rnd.nextDouble();
+                    int newZ = 0, newL = 0, newX = 0;
+                    for (newZ = 0; newZ < K; newZ++) {
+                        for (newL = 0; newL < L; newL++) {
+                            for (newX = 0; newX < X; newX++) {
+                                if (sampleWordProb < wordP[newZ][newL][newX]) { break; }
+                            }
+                        }
+                    }
+                    w.z = topics[newZ];
+                    w.l = sentiments[newL];
+                    w.x = newX;
+                    nTopicInViewpoint[newViewpoint][newZ]++;
+                    nTopicInViewpointSum[newViewpoint]++;
+                    nWordInTopicViewpointSentiment[newZ][newViewpoint][newL][w.id]++;
+                    nWordInTopicViewpointSentimentSum[newZ][newViewpoint][newL]++;
+                    nWordJ2X[w.id][w.x]++;
+                    nWordJ2XSum[w.id]++;
                 }
             }
         }
@@ -370,6 +418,33 @@ public class sCVR {
 
     private void doMStep() {
         // re-estimate theta, pi, fai, mew, lambda from Eq. 8
+
+        // re-estimate theta
+        for (int u = 0; u < U; u++) {
+            for (int r = 0; r < R; r++) {
+                for (int v = 0; v < V; v++) {
+                    User[] friends = users[u].friends;
+                    int nFriends = friends.length;
+                    double sumFriendsInfluence = 0.0;
+                    for (User f : friends) {
+                        sumFriendsInfluence += trustValueU0U1.get(u).get(f.id) * thetaUserRatingViewpoint[f.id][r][v] / nFriends;
+                    }
+                    sumFriendsInfluence += thetaBaseUserRatingViewpoint[u][r][v];
+                    thetaUserRatingViewpoint[u][r][v] = (nUserViewpointsRating[u][v][r] + sumFriendsInfluence) /
+                            (nUserViewpointsRatingSum[u][v] + nUserRateItems[u] * sumFriendsInfluence);
+                }
+            }
+        }
+
+        // re-estimate pi
+        for (int i = 0; i < I; i++) {
+            for (int v = 0; v < V; v++) {
+                pi[i][v] = (nViewpointInItem[i][v] + alpha) / (nViewpointInItemSum[i] + V * alpha);
+            }
+        }
+
+        // not sure whether it is necessary to update fai, mew or lambda
+
         // maximize baseTheta from Eq.9
     }
 
