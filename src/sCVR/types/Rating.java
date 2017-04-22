@@ -7,4 +7,6 @@ public class Rating {
 
     public int val;
 
+    public Viewpoint viewpoint;
+
 }

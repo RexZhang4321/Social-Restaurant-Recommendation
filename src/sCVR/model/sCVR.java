@@ -45,10 +45,10 @@ public class sCVR {
     // for Eq.3
     // R_{u}
     private int[] nUserRateItems;   // nUserRateItem[u], number of times user u rates all items
-    // n_{f, -(u, i)}^{i ,y}    TODO: probably redundant to *nViewpointInItem*
-    //private int[][] nVarfAssign2YInItem; // nVarfAssignYInItem[i][f], in item i, number of times variable f has been assigned to y
+    // n_{f, -(u, i)}^{i ,y}
+    private int[][] nRatingViewpointInItem; // nVarfAssignYInItem[i][f], in item i, number of times variable f has been assigned to y
     // n_{f, -(u, i)}^{i}
-    //private int[] nVarfAssignInItemSum;  // nVarfAssignInItemSum[i], in item i, number of viewpoints v has been assigned
+    private int[] nRatingViewpointInItemSum;  // nVarfAssignInItemSum[i], in item i, number of viewpoints v has been assigned
     // n_{u, -i}^{r_{u,i}, y}
     // private int[][][] nUserItemViewpoints;  // nUserItemViewpoints[u][i][v], number of times user u rates item i with viewpoint v
     private int[][][] nUserViewpointsRating;    // nUserViewpointsRating[u][v][r], number of times user u gives rating r for certain viewpoint v, excluding item i
@@ -115,8 +115,8 @@ public class sCVR {
         rnd = new Random(seed);
 
         nUserRateItems = new int[U];    // init done
-        //nVarfAssign2YInItem = new int[I][V];    // init done
-        //nVarfAssignInItemSum = new int[I];      // init done
+        nRatingViewpointInItem = new int[I][V];    // init done
+        nRatingViewpointInItemSum = new int[I];      // init done
         //nUserItemViewpoints = new int[U][I][V]; // init done
         //nUserItemViewpointsSum = new int[U][I]; // init done
         nUserViewpointsRating = new int[U][V][R];
@@ -137,7 +137,8 @@ public class sCVR {
         nWordJ2X = new int[N][X];   // init done
         nWordJ2XSum = new int[N];   // init done
 
-        Viewpoint tmpViewpoint;
+        Viewpoint tmpReviewViewpoint;
+        Viewpoint tmpRatingViewpoint;
         Review tmpReview;
         for (User u : users) {
             for (User u1 : u.friends) {
@@ -147,20 +148,22 @@ public class sCVR {
             for (Item i : items) {
                 tmpReview = Review.reviewDocs.get(u.id).get(i.id);
                 int tmpRating = tmpReview.rating;
-                // assign a random viewpoint
-                tmpViewpoint = viewpoints[rnd.nextInt(V)];
-                // assign a random topic to the viewpoint
-                tmpViewpoint.topic = topics[rnd.nextInt(K)];
-                tmpViewpoint.sentiment = sentiments[rnd.nextInt(L)];
-                tmpViewpoint.concept = concepts[rnd.nextInt(E)];
-                tmpReview.v = tmpViewpoint;
-                nUserViewpointsRating[u.id][tmpViewpoint.id][tmpRating] += 1;
-                nViewpointInReview[tmpViewpoint.id] += 1;
-                nViewpointInItem[i.id][tmpViewpoint.id] += 1;
+                // assign a random viewpoint for review
+                tmpReviewViewpoint = viewpoints[rnd.nextInt(V)];
+                // assign a random topic to the viewpoint for review
+                tmpReviewViewpoint.topic = topics[rnd.nextInt(K)];
+                tmpReviewViewpoint.sentiment = sentiments[rnd.nextInt(L)];
+                tmpReviewViewpoint.concept = concepts[rnd.nextInt(E)];
+                tmpReview.v = tmpReviewViewpoint;
+                nUserViewpointsRating[u.id][tmpReviewViewpoint.id][tmpRating] += 1;
+                nViewpointInReview[tmpReviewViewpoint.id] += 1;
+                nViewpointInItem[i.id][tmpReviewViewpoint.id] += 1;
+                // assign a random viewpoint for rating
+                nRatingViewpointInItem[i.id][rnd.nextInt(V)] += 1;
                 for (Word w : tmpReview.words) {
                     // assign a random topic
                     w.z = topics[rnd.nextInt(K)];
-                    nWordInTopicViewpointSentiment[w.z.id][tmpViewpoint.id][w.l.id][w.id] += 1;
+                    nWordInTopicViewpointSentiment[w.z.id][tmpReviewViewpoint.id][w.l.id][w.id] += 1;
                     nWordJ2X[w.id][w.x] += 1;
                 }
             }
@@ -180,6 +183,7 @@ public class sCVR {
         for (int i = 0; i < I; i++) {
             for (int j = 0; j < V; j++) {
                 nViewpointInItemSum[i] += nViewpointInItem[i][j];
+                nRatingViewpointInItemSum[i] += nRatingViewpointInItem[i][j];
             }
         }
         for (Viewpoint v : viewpoints) {
@@ -223,15 +227,14 @@ public class sCVR {
         for (int u = 0; u < U; u++) {
             for (int i = 0; i < I; i++) {
                 // --------------- draw f_{u, i} = y from Eq.3 ---------------
-                // TODO: review[u][i] may be nil
                 Review oldReview = Review.reviewDocs.get(u).get(i);
+                if (oldReview == null) { continue; }
                 Viewpoint oldViewpoint = oldReview.v;
                 int oldRating = oldReview.rating;
-                // TODO: not sure whether there is any difference between the following 2 pairs of values after updating
-                int[] nViewpointInItemNoExclude = nViewpointInItem[i];
-                int nViewpointInItemSumNoExclude = nViewpointInItemSum[i];
+                Rating oldRatingObj = oldReview.ratingObj;
                 // excluding user u
-                nViewpointInItem[i][oldViewpoint.id]--;
+                // TODO: how to decide which rating viewpoint to subtract... Is the following true?
+                nViewpointInItem[i][oldRatingObj.viewpoint.id]--;
                 nViewpointInItemSum[i]--;
                 // excluding item i
                 nUserViewpointsRating[u][oldViewpoint.id][oldRating]--;
@@ -253,8 +256,8 @@ public class sCVR {
                     p[v] = ((nUserViewpointsRating[u][v][oldRating] + thetaUserRatingViewpoint[u][oldRating][v]) /
                             (nUserViewpointsRatingSum[u][v] + nUserRateItems[u] * thetaUserRatingViewpoint[u][oldRating][v]))
                             *
-                            ((nViewpointInItem[i][v] + nViewpointInItemNoExclude[v] + alpha) /
-                                    (nViewpointInItemSum[i] + nViewpointInItemSumNoExclude + V * alpha));
+                            ((nRatingViewpointInItem[i][v] + nViewpointInItem[i][v] + alpha) /
+                                    (nRatingViewpointInItemSum[i] + nViewpointInItemSum[i] + V * alpha));
                 }
                 for (int v = 0; v < V; v++) {
                     p[v] += p[v - 1];
@@ -265,8 +268,9 @@ public class sCVR {
                     if (sampleVPProb < p[newViewpoint]) { break; }
                 }
                 // update
-                nViewpointInItem[i][newViewpoint]++;
-                nViewpointInItemSum[i]++;
+                nRatingViewpointInItem[i][newViewpoint]++;
+                oldRatingObj.viewpoint = viewpoints[newViewpoint];
+                nRatingViewpointInItemSum[i]++;
                 nUserViewpointsRating[u][newViewpoint][oldRating]++;
                 nUserViewpointsRatingSum[u][newViewpoint]++;
 
@@ -278,38 +282,36 @@ public class sCVR {
                 nViewpointInReviewSum--;
                 // Compute Eq.5 && sampling
                 for (int v = 0; v < V; v++) {
-                    double viewpointPart = (nViewpointInReview[v] + nViewpointInItemNoExclude[v] + alpha) /
-                            (nViewpointInReviewSum + nViewpointInItemSumNoExclude + V * alpha);
+                    double viewpointPart = (nViewpointInReview[v] + nRatingViewpointInItem[v][i] + alpha) /
+                            (nViewpointInReviewSum + nRatingViewpointInItemSum[v] + V * alpha);
                     double conceptPart = 0.0;
                     for (int e = 0; e < E; e++) {
                         // exclude review d
                         nConceptInViewpoint[oldViewpoint.id][e]--;
                         nConceptInViewpointSum[oldViewpoint.id]--;
                         conceptPart += (nConceptInViewpoint[v][e] + sigma) / (nConceptInViewpointSum[v] + E * sigma);
-                        // TODO: add the exclusion back?
                     }
                     double topicPart = 0.0;
+                    double tmpTopicPart = 0.0;
+                    double sentimentWordPart = 0.0;
+                    double wordPart = 0.0;
                     for (int z = 0; z < K; z++) {
                         // exclude review d
                         nTopicInViewpoint[oldViewpoint.id][z]--;
                         nTopicInViewpointSum[oldViewpoint.id]--;
-                        topicPart += (nTopicInViewpoint[v][z] + chi) / (nTopicInViewpointSum[v] + K * chi);
-                        // TODO: add the exclusion back?
-                    }
-                    double sentimentWordPart = 0.0;
-                    double wordPart;
-                    // TODO: what does this sentiment l in the paper mean??
-                    for (int l = 0; l < L; l++) {
-                        wordPart = 0.0;
-                        for (Word w : oldReview.words) {
-                            // exclude review d
-                            nWordInTopicViewpointSentiment[oldTopic.id][oldViewpoint.id][oldSentiment.id][w.id]--;
-                            nWordInTopicViewpointSentimentSum[oldTopic.id][oldViewpoint.id][oldSentiment.id]--;
-                            wordPart += (nWordInTopicViewpointSentiment[oldTopic.id][v][oldSentiment.id][w.id] + beta) /
-                                    (nWordInTopicViewpointSentimentSum[oldTopic.id][v][oldSentiment.id] + N * beta);
-                            // TODO: add the exclusion back?
+                        tmpTopicPart = (nTopicInViewpoint[v][z] + chi) / (nTopicInViewpointSum[v] + K * chi);
+                        for (int l = 0; l < L; l++) {
+                            wordPart = 0.0;
+                            for (Word w : oldReview.words) {
+                                // exclude review d
+                                nWordInTopicViewpointSentiment[oldTopic.id][oldViewpoint.id][oldSentiment.id][w.id]--;
+                                nWordInTopicViewpointSentimentSum[oldTopic.id][oldViewpoint.id][oldSentiment.id]--;
+                                wordPart += (nWordInTopicViewpointSentiment[z][v][l][w.id] + beta) /
+                                        (nWordInTopicViewpointSentimentSum[z][v][l] + N * beta);
+                            }
+                            sentimentWordPart += wordPart;
                         }
-                        sentimentWordPart += wordPart;
+                        topicPart += tmpTopicPart * sentimentWordPart;
                     }
                     p[v] = viewpointPart * conceptPart * topicPart * sentimentWordPart;
                 }
@@ -330,12 +332,14 @@ public class sCVR {
                 for (int z = 0; z < K; z++) {
                     nTopicInViewpoint[newViewpoint][z]++;
                     nTopicInViewpointSum[newViewpoint]++;
-                }
-                for (int l = 0; l < L; l++) {
-                    for (Word w : oldReview.words) {
-                        // TODO: update nWordInTopicViewpointSentiment
+                    for (int l = 0; l < L; l++) {
+                        for (Word w : oldReview.words) {
+                            nWordInTopicViewpointSentiment[z][newViewpoint][l][w.id]++;
+                            nWordInTopicViewpointSentimentSum[z][newViewpoint][l]++;
+                        }
                     }
                 }
+                oldReview.v = viewpoints[newViewpoint];
 
                 for (Word w : oldReview.words) {
                     // --------------- draw <z_j, l_j, x_j> from Eq.6 ---------------
@@ -350,7 +354,7 @@ public class sCVR {
                     double part1, part2, part3, part4;
 
                     if (w.x == 0) {
-                        part1 = (nTopicInViewpoint) / ();
+                        //part1 = (nTopicInViewpoint) / ();
                     } else {
 
                     }

@@ -17,6 +17,8 @@ public class Review {
     public Item item;
     public int id;
     public int rating;
+    public Rating ratingObj;
+    public Concept concept;
 
     public Review() {
     }
