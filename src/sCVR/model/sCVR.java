@@ -250,9 +250,10 @@ public class sCVR {
                 int oldRating = oldReview.rating;
                 Rating oldRatingObj = oldReview.ratingObj;
                 // excluding user u
-                // TODO: how to decide which rating viewpoint to subtract... Is the following true?
-                nViewpointInItem[i][oldRatingObj.viewpoint.id]--;
-                nViewpointInItemSum[i]--;
+                // TODO: rating viewpoint is associate with rating,
+                //        while review viewpoint is associate with review
+                nRatingViewpointInItem[i][oldRatingObj.viewpoint.id]--;
+                nRatingViewpointInItemSum[i]--;
                 // excluding item i
                 nUserViewpointsRating[u][oldViewpoint.id][oldRating]--;
                 nUserViewpointsRatingSum[u][oldViewpoint.id]--;

@@ -11,14 +11,14 @@ public class Review {
 
     public static HashMap<Integer, HashMap<Integer, Review>> reviewDocs;
 
-    public Viewpoint v;     // corresponding viewpoint
-    public Word[] words;    // for words w in document d
-    public User u;
-    public Item item;
     public int id;
-    public int rating;
-    public Rating ratingObj;
+    public User user;
+    public Item item;
+    public Rating rating;
+    public Viewpoint ratingViewpoint;
+    public Viewpoint reviewViewpoint;
     public Concept concept;
+    public ArrayList<Word> words;    // for words w in document d
 
     public Review() {
     }
