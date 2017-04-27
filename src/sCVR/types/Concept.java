@@ -6,6 +6,6 @@ package sCVR.types;
 public class Concept {
 
     public int id;
-    public String val;
+    public String concept;
 
 }
