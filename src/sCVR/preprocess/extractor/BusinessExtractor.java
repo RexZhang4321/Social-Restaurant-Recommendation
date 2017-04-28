@@ -1,12 +1,9 @@
 package sCVR.preprocess.extractor;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -22,12 +19,15 @@ import sCVR.preprocess.bean.YelpBusiness;
  * @return the set of business_id
  */
 public class BusinessExtractor {
-	public static List<YelpBusiness> getBusinesses(String fromFileName, String city, Set<String> businessIds, Set<String> categories) throws IOException, JSONException {
+	public static List<YelpBusiness> getBusinesses(String fromFileName, String city, Set<String> businessIds, Set<String> categories, String tempFile) throws IOException, JSONException {
 		InputStream fis = new FileInputStream(fromFileName);
         InputStreamReader isr = new InputStreamReader(fis, Charset.forName("UTF-8"));
         BufferedReader br = new BufferedReader(isr);
         String line;
-        
+
+        FileWriter fw = new FileWriter(tempFile);
+        BufferedWriter bw = new BufferedWriter(fw);
+
         List<YelpBusiness> result = new ArrayList<YelpBusiness>();
         while ((line = br.readLine()) != null) {
             JSONObject review = new JSONObject(line);
@@ -46,15 +46,29 @@ public class BusinessExtractor {
                     }
                     curr.setCategories(cateList);
                 }
+                result.add(curr);
+
+                //Write Json
+                JSONObject obj = new JSONObject();
+                obj.put("business_id", curr.getBusiness_id());
+                JSONArray categoryJson = new JSONArray();
+                for(String c : curr.getCategories()){
+                    categoryJson.put(c);
+                }
+                obj.put("categories", categoryJson);
+                bw.write(obj.toString());
+                bw.write("\r\n");
             }
         }
+        bw.close();
+        fw.close();
         br.close();
         return result;
 	}
 
 	public static void main(String[] args) throws IOException, JSONException {
-//        String yelpBusiness = "/Users/Dylan/Downloads/yelp_dataset_challenge_round9/yelp_academic_dataset_business.json";
-//		List<YelpBusiness> result = getBusinesses(yelpBusiness,"Pleasant Hills");
+        String yelpBusiness = "/Users/Dylan/Downloads/yelp_dataset_challenge_round9/yelp_academic_dataset_business.json";
+		List<YelpBusiness> result = getBusinesses(yelpBusiness,"Pleasant Hills",new HashSet<String>(), new HashSet<String>(), "temp.json");
 //		for(YelpBusiness y : result){
 //		    System.out.println(y.getBusiness_id());
 //        }

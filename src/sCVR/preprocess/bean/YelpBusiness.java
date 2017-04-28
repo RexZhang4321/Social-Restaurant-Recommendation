@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class YelpBusiness {
-	String business_id;
+	String business_id; //
 	String  name;
 	String  neighborhood;
 	String  address;
@@ -16,7 +16,7 @@ public class YelpBusiness {
 	double stars;
 	int review_count;
 	int is_open;
-	List<String> categories;
+	List<String> categories;//
 	List<String> hours;
 	String type;
 	

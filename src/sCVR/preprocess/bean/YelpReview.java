@@ -1,23 +1,35 @@
 package sCVR.preprocess.bean;
 
+import sCVR.preprocess.nlp.WordScore;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class YelpReview {
-	String review_id;
-	String user_id;
-	String business_id;
+	String review_id;//
+	String user_id;//
+	String business_id;//
 	int star;
 	String date;
 	String text;
-	List<String> textList;
+	List<String> textList; //
 	int useful;
 	int funny;
 	int cool;
 	String type;
-	String concept;
-	int sentiment;
+	String concept;//
+	int sentiment; //
+	List<String[]> wordScores; //
+
+	public List<String[]> getWordScores() {
+		return wordScores;
+	}
+
+	public void setWordScores(List<String[]> wordScores) {
+		this.wordScores = wordScores;
+	}
 
 	public String getConcept() {return concept;}
 	public void setConcept(String concept) {this.concept = concept;}
@@ -56,9 +68,12 @@ public class YelpReview {
 	public String getText() {
 		return text;
 	}
-	public void setText(String text) {
+	public void setText(String text) throws IOException {
 		this.text = text;
 		textList = new ArrayList<String>(Arrays.asList(text.replaceAll("[^a-zA-Z' ]", " ").toLowerCase().split("\\s+")));
+		System.out.println("WordScore start");
+		wordScores = WordScore.scoreWrapper(text);
+		System.out.println("WordScore end");
 	}
 	public int getUseful() {
 		return useful;

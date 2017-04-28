@@ -1,6 +1,9 @@
 package sCVR.preprocess;
 
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import sCVR.preprocess.bean.YelpBusiness;
 import sCVR.preprocess.bean.YelpReview;
 import sCVR.preprocess.bean.YelpUser;
@@ -14,7 +17,8 @@ import sCVR.types.Item;
 import sCVR.types.Review;
 import sCVR.types.User;
 
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.Charset;
 import java.util.*;
 import sCVR.types.*;
 
@@ -30,6 +34,11 @@ public class Preprossor {
     private static String yelpReviewFile = "/Users/Dylan/Downloads/yelp_dataset_challenge_round9/yelp_academic_dataset_review.json";
     private static String w2vFile = "/Users/Dylan/Downloads/glove.6B/glove.6B.300d.txt";
 
+    private static String reviewTemp = "reviewTemp.json";
+    private static String userTemp = "userTemp.json";
+    private static String businessTemp = "businessTemp.json";
+    private static String categoryTemp = "categoryTemp.json";
+
     private List<YelpReview> yelpReviews;
     private List<YelpUser> yelpUsers;
     private List<YelpBusiness>yelpBusinesses;
@@ -43,14 +52,14 @@ public class Preprossor {
     public void preprocess(String city) throws IOException {
         Set<String> businessIds = new HashSet<String>();
         Set<String> categories = new HashSet<String>();
-        yelpBusinesses = BusinessExtractor.getBusinesses(yelpBusinessFile, city, businessIds, categories);
+        yelpBusinesses = BusinessExtractor.getBusinesses(yelpBusinessFile, city, businessIds, categories, businessTemp);
         Set<String> userIds = new HashSet<String>();
         SentimentCal.init();
 		GenW2V.generate(w2vFile);
-        yelpReviews = ReviewExtractor.getReviews(yelpReviewFile, userIds, businessIds, categories);
-        yelpUsers = UserExtractor.getUsers(yelpUserFile, userIds);
+        yelpReviews = ReviewExtractor.getReviews(yelpReviewFile, userIds, businessIds, categories, reviewTemp);
+        yelpUsers = UserExtractor.getUsers(yelpUserFile, userIds, userTemp);
         yelpCategories = new ArrayList(categories);
-
+        categoryJsonParsor(yelpCategories,categoryTemp);
         setUpGlobals();
         doLink();
     }
@@ -136,6 +145,22 @@ public class Preprossor {
         Globals.reviews = reviews.toArray(new Review[reviews.size()]);
         Globals.items = items.toArray(new Item[items.size()]);
         Globals.users = users.toArray(new User[users.size()]);
+    }
+
+    public static void categoryJsonParsor(List<String> categories, String tempFile) throws IOException, JSONException {
+        FileWriter fw = new FileWriter(tempFile);
+        BufferedWriter bw = new BufferedWriter(fw);
+
+        //Write Json
+//        JSONObject obj = new JSONObject();
+//        obj.put("business_id", curr.getBusiness_id());
+        JSONArray categoryJson = new JSONArray();
+        for(String c : categories){
+            categoryJson.put(c);
+        }
+        bw.write(categoryJson.toString());
+        bw.write("\r\n");
+        bw.close();
     }
 
 }

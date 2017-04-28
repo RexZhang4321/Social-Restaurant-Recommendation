@@ -19,7 +19,7 @@ public class SentimentCal {
 //    static SentimentPipeline pipeline2;
     public static void init() {
         Properties props = new Properties();
-        props.setProperty("annotators", "tokenize, ssplit, parse, sentiment");
+        props.setProperty("annotators", "tokenize, ssplit, pos, lemma, ner, parse, dcoref, sentiment");
         pipeline = new StanfordCoreNLP(props);
     }
 
