@@ -402,4 +402,8 @@ public class sCVR {
         }
     }
 
+    public void predict(int uid, int iid) {
+
+    }
+
 }
