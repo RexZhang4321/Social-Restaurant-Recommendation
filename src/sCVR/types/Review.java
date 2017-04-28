@@ -16,11 +16,12 @@ public class Review {
     public Viewpoint ratingViewpoint;
     public Viewpoint reviewViewpoint;
     public Concept concept;
-    public Topic topic;
+    public int topicCnt[];
     public Sentiment sentiment;
     public ArrayList<Word> words;    // for words w in document d
 
     public Review() {
+        topicCnt = new int[Globals.K];
     }
 
 }

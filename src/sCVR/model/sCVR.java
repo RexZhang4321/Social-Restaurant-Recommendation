@@ -22,6 +22,35 @@ public class sCVR {
 
     public double pi[][];
 
+    /* -------------- Gibbs Sampling Variables Start ------------ */
+
+    // n_{z, l, v}^{w, -d}
+    // number of word w in certain <z, v, l>
+    // nWordInTopicViewpointSentiment[z][v][l][w]
+    public int[][][][] nWordInTopicViewpointSentiment;    // done
+
+    // n_{z, l, v}^{-d}
+    // number of words have been assigned to this z, v, l
+    // nWordInTopicViewpointSentimentSum[z][v][l]
+    public int[][][] nWordInTopicViewpointSentimentSum;  // done
+
+    // n_{z, v}^{-j}
+    // how many words are assigned to viewpoint v and topic z excluding w_j
+    // nWordInTopicViewpoint[z][v]
+    public int[][] nWordInTopicViewpoint;    // done
+
+    // n_{-j, x}^{w_j}
+    // number of time word j has been assigned to x excluding current word
+    // nWordJInX[w][x]
+    public int[][] nWordJInX; // done
+
+    // n_{-j}^{w_j}
+    // number of times word j has been assigned to all x excluding current word
+    // nWordJInXSum[w]
+    public int[] nWordJInXSum;    // done
+
+    /* -------------- Gibbs Sampling Variables End------------ */
+
     public sCVR() {
         init();
     }
@@ -31,16 +60,27 @@ public class sCVR {
 
         pi = new double[Globals.I][Globals.V];
 
+        nWordInTopicViewpointSentiment = new int[Globals.K][Globals.V][Globals.L][Globals.N];
+        nWordInTopicViewpointSentimentSum = new int[Globals.K][Globals.V][Globals.L];
+        nWordInTopicViewpoint = new int[Globals.K][Globals.V];
+        nWordJInX = new int[Globals.N][Globals.X];
+        nWordJInXSum = new int[Globals.N];
+
         // Randomize latent variables
         for (User u : Globals.users) {
             for (Review review : u.reviews) {
                 review.ratingViewpoint = Globals.viewpoints[rnd.nextInt(Globals.V)];
                 review.reviewViewpoint = Globals.viewpoints[rnd.nextInt(Globals.V)];
-                review.topic = Globals.topics[rnd.nextInt(Globals.K)];
                 for (Word word : review.words) {
                     word.topic = Globals.topics[rnd.nextInt(Globals.K)];
                     word.sentiment = Globals.sentiments[rnd.nextInt(Globals.L)];
                     word.x = rnd.nextInt(Globals.X);
+                    review.topicCnt[word.topic.id]++;
+                }
+            }
+            for (int r = 0; r < Globals.R; r++) {
+                for (int v = 0; v < Globals.V; v++) {
+                    u.theta0RatingViewpoint[r][v] = u.thetaRatingViewpoint[r][v] = 1 / (Globals.R * Globals.V);
                 }
             }
         }
@@ -60,11 +100,11 @@ public class sCVR {
             user.nAllItemRatings = user.reviews.size();
             for (Review review : user.reviews) {
                 for (Word word : review.words) {
-                    Globals.words[word.id].nWordInTopicViewpointSentiment[word.topic.id][review.reviewViewpoint.id][word.sentiment.id]++;
-                    Globals.words[word.id].nWordJInX[word.x]++;
-                    Globals.words[word.id].nWordJInXSum++;
-                    Word.nWordInTopicViewpointSentimentSum[word.topic.id][review.reviewViewpoint.id][word.sentiment.id]++;
-                    Word.nWordInTopicViewpoint[word.topic.id][review.reviewViewpoint.id]++;
+                    nWordInTopicViewpointSentiment[word.topic.id][review.reviewViewpoint.id][word.sentiment.id][word.id]++;
+                    nWordJInX[word.x][word.id]++;
+                    nWordJInXSum[word.id]++;
+                    nWordInTopicViewpointSentimentSum[word.topic.id][review.reviewViewpoint.id][word.sentiment.id]++;
+                    nWordInTopicViewpoint[word.topic.id][review.reviewViewpoint.id]++;
                 }
             }
         }
@@ -74,9 +114,10 @@ public class sCVR {
             Globals.viewpoints[review.ratingViewpoint.id].nRatingViewpointsForRatingSum[review.user.id]++;
             Globals.viewpoints[review.reviewViewpoint.id].nConceptInViewpoint[review.concept.id]++;
             Globals.viewpoints[review.reviewViewpoint.id].nConceptInViewpointSum++;
-            // TODO: How to define the topic of viewpoint? Binding the topic to review as the topic of this viewpoint? Then how to update? OR is define by the sum of word's topics
-            Globals.viewpoints[review.reviewViewpoint.id].nTopicInViewpoint[review.topic.id]++;
-            Globals.viewpoints[review.reviewViewpoint.id].nTopicInViewpointSum++;
+            for (int i = 0; i < review.topicCnt.length; i++) {
+                Globals.viewpoints[review.reviewViewpoint.id].nTopicInViewpoint[i] += review.topicCnt[i];
+                Globals.viewpoints[review.reviewViewpoint.id].nTopicInViewpointSum += review.topicCnt[i];
+            }
         }
     }
 
@@ -91,6 +132,18 @@ public class sCVR {
     private void doEStep() {
         double p_V[] = new double[Globals.V];
         for (User user : Globals.users) {
+
+            // Compute Eq.4 to get the updated user-rating-viewpoint distribution
+            // Since for current user, we only need to update his thetaUserRatingViewpoint once with his social relation
+            // we assume trusted value is either 1 or 0
+            int nFriends = user.friends.size();
+            for (User friend : user.friends) {
+                for (int row = 0; row < Globals.R; row++) {
+                    for (int col = 0; col < Globals.V; col++) {
+                        user.thetaRatingViewpoint[row][col] += friend.thetaRatingViewpoint[row][col] / nFriends;
+                    }
+                }
+            }
             for (Item item : user.items) {
 
                 Review oldReview = Globals.reviewMap.get(user.id).get(item.id);
@@ -122,7 +175,6 @@ public class sCVR {
 
                 // sampling
                 for (int y = 0; y < Globals.V; y++) {
-                    // TODO: in reviewViewpoint, do we need to sample as the ratingViewpoint does? item.nReviewViewpointInItem[oldReviewViewpoint.id]
                     p_V[y] = ((oldRatingViewpoint.nRatingViewpointsForRating[user.id][oldRating] + user.thetaRatingViewpoint[oldRating][y]) /
                               (oldRatingViewpoint.nRatingViewpointsForRatingSum[user.id] + user.nAllItemRatings * user.thetaRatingViewpoint[oldRating][y]))
                              *
@@ -161,22 +213,21 @@ public class sCVR {
                 // excluding d : nReviewViewpointInItem
                 item.nReviewViewpointInItem[oldReviewViewpoint.id]--;
                 item.nReviewViewpointInItemSum--;
-                // TODO: how should I express "excluding d" here?? how to remove viewpoint concept assignment
                 oldReviewViewpoint.nConceptInViewpoint[oldReview.concept.id]--;
                 oldReviewViewpoint.nConceptInViewpointSum--;
-                // TODO: so does topic
-                oldReviewViewpoint.nTopicInViewpoint[oldReview.topic.id]--;
-                oldReviewViewpoint.nTopicInViewpointSum--;
-                // TODO: so does word
-                for (Word word : oldReview.words) {
-                    word.nWordInTopicViewpointSentiment[oldReview.topic.id][oldReviewViewpoint.id][oldReview.sentiment.id]--;
-                    Word.nWordInTopicViewpointSentimentSum[oldReview.topic.id][oldReviewViewpoint.id][oldReview.sentiment.id]--;
+                /*
+                //this should be equivalent to the following inside word loop
+                for (int i = 0; i < oldReview.topicCnt.length; i++) {
+                    oldReviewViewpoint.nTopicInViewpoint[i] -= oldReview.topicCnt[i];
+                    oldReviewViewpoint.nTopicInViewpointSum -= oldReview.topicCnt[i];
                 }
-
-
-                ArrayList<Integer> tmpE = new ArrayList<>();
-                ArrayList<Integer> tmpZ = new ArrayList<>();
-                ArrayList<Integer[]> tmpZLW = new ArrayList<>();
+                */
+                for (Word word : oldReview.words) {
+                    nWordInTopicViewpointSentiment[word.topic.id][oldReviewViewpoint.id][oldReview.sentiment.id][word.id]--;
+                    nWordInTopicViewpointSentimentSum[word.topic.id][oldReviewViewpoint.id][oldReview.sentiment.id]--;
+                    oldReviewViewpoint.nTopicInViewpoint[word.topic.id]--;
+                    oldReviewViewpoint.nTopicInViewpointSum--;
+                }
 
                 for (int v = 0; v < Globals.V; v++) {
                     Viewpoint curVP = Globals.viewpoints[v];
@@ -184,13 +235,6 @@ public class sCVR {
                             (item.nReviewViewpointInItemSum + item.nRatingViewpointInItemSum + Globals.V * alpha);
                     double conceptPart = 0.0;
                     for (int e = 0; e < Globals.E; e++) {
-                        // excluding d : oldReviewViewpoint.nConceptInViewpoint
-                        // TODO: how should I express "excluding d" here?? It's weired to subtract every e
-                        if (oldReviewViewpoint.nConceptInViewpoint[e] > 0) {
-                            oldReviewViewpoint.nConceptInViewpoint[e]--;
-                            oldReviewViewpoint.nConceptInViewpointSum--;
-                            tmpE.add(e);
-                        }
                         conceptPart += (curVP.nConceptInViewpoint[e] + sigma) / (curVP.nConceptInViewpointSum + Globals.E * sigma);
                     }
                     double topicPart = 0.0;
@@ -198,29 +242,12 @@ public class sCVR {
                     double sentimentWordPart = 0.0;
                     double wordPart;
                     for (int z = 0; z < Globals.K; z++) {
-                        // excluding d : oldReviewViewpoint.nTopicInViewpoint
-                        if (oldReviewViewpoint.nTopicInViewpoint[z] > 0) {
-                            oldReviewViewpoint.nTopicInViewpoint[z]--;
-                            oldReviewViewpoint.nTopicInViewpointSum--;
-                            tmpZ.add(z);
-                        }
                         tmpTopicPart = (curVP.nTopicInViewpoint[z] + chi) / (curVP.nTopicInViewpointSum + Globals.K * chi);
                         for (int l = 0; l < Globals.L; l++) {
-                            // excluding d : word.....
                             wordPart = 0.0;
-                            HashMap<Integer, Integer> hm = new HashMap<>();
                             for (Word word : oldReview.words) {
-                                hm.put(word.id, hm.getOrDefault(word.id, 0) + 1);
-                            }
-                            for (int wid : hm.keySet()) {
-                                Word word = Globals.words[wid];
-                                if (word.nWordInTopicViewpointSentiment[z][oldReviewViewpoint.id][l] > 0) {
-                                    word.nWordInTopicViewpointSentiment[z][oldReviewViewpoint.id][l] -= hm.get(wid);
-                                    Word.nWordInTopicViewpointSentimentSum[z][oldReviewViewpoint.id][l] -= hm.get(wid);
-                                    tmpZLW.add(new Integer[]{wid, z, l, hm.get(wid)});
-                                }
-                                wordPart += (word.nWordInTopicViewpointSentiment[z][v][l] + beta) /
-                                        (Word.nWordInTopicViewpointSentimentSum[z][v][l] + Globals.N * beta);
+                                wordPart += (nWordInTopicViewpointSentiment[z][v][l][word.id] + beta) /
+                                        (nWordInTopicViewpointSentimentSum[z][v][l] + Globals.N * beta);
                             }
                             sentimentWordPart += wordPart;
                         }
@@ -241,47 +268,87 @@ public class sCVR {
                 Viewpoint newVP = Globals.viewpoints[newReviewViewpoint];
                 item.nReviewViewpointInItem[newReviewViewpoint]++;
                 item.nReviewViewpointInItemSum++;
-                for (int e : tmpE) {
-                    newVP.nConceptInViewpoint[e]++;
-                    newVP.nConceptInViewpointSum++;
-                }
-                for (int z : tmpZ) {
-                    newVP.nTopicInViewpoint[z]++;
-                    newVP.nTopicInViewpointSum++;
-                }
-                for (Integer[] arr : tmpZLW) {
-                    Word w = Globals.words[arr[0]];
-                    w.nWordInTopicViewpointSentiment[arr[1]][newReviewViewpoint][arr[2]] += arr[3];
-                    Word.nWordInTopicViewpointSentimentSum[arr[1]][newReviewViewpoint][arr[2]] += arr[3];
-                }
-
-                // TODO: OR using the following to update sufficient statistics
                 newVP.nConceptInViewpoint[oldReview.concept.id]++;
                 newVP.nConceptInViewpointSum++;
-                newVP.nTopicInViewpoint[oldReview.topic.id]++;
-                newVP.nTopicInViewpointSum++;
                 for (Word word : oldReview.words) {
-                    word.nWordInTopicViewpointSentiment[oldReview.topic.id][newReviewViewpoint][oldReview.sentiment.id]++;
-                    Word.nWordInTopicViewpointSentimentSum[oldReview.topic.id][newReviewViewpoint][oldReview.sentiment.id]++;
+                    nWordInTopicViewpointSentiment[word.topic.id][newReviewViewpoint][oldReview.sentiment.id][word.id]--;
+                    nWordInTopicViewpointSentimentSum[word.topic.id][newReviewViewpoint][oldReview.sentiment.id]--;
+                    oldReviewViewpoint.nTopicInViewpoint[word.topic.id]++;
+                    oldReviewViewpoint.nTopicInViewpointSum++;
                 }
 
                 // update vars
                 oldReview.reviewViewpoint = newVP;
 
-                for (int wid = 0; wid < oldReview.words.size(); wid++) {
-                    Word w = oldReview.words.get(wid);
-                    Word wNext = (wid == oldReview.words.size() - 1 ? w : oldReview.words.get(wid + 1));
+                for (int i = 0; i < oldReview.words.size(); i++) {
+                    Word w = oldReview.words.get(i);
+                    Word wNext = (i == oldReview.words.size() - 1 ? w : oldReview.words.get(i + 1));
 
                     // --------------- draw <z_j, l_j, x_j> from Eq.6 ---------------
 
                     // excluding word w_j
-                    // TODO: why should the topic in viewpoint relate to word's topic?? Should the topic of the viewpoint be the sum of words' topic?
-                    newVP.nTopicInViewpoint[oldReview.topic.id]--;
+                    newVP.nTopicInViewpoint[w.id]--;
+                    newVP.nTopicInViewpointSum--;
+                    nWordInTopicViewpointSentiment[w.topic.id][newVP.id][oldReview.sentiment.id][w.id]--;
+                    nWordInTopicViewpointSentimentSum[w.topic.id][newVP.id][oldReview.sentiment.id]--;
+                    nWordJInX[w.id][w.x]--;
+                    nWordJInXSum[w.id]--;
+                    if (w.x != 0) {
+                        nWordJInX[wNext.id][wNext.x]--;
+                        nWordJInXSum[wNext.id]--;
+                    }
+
+                    // sampling
+                    double part1, part2, part3, part4;
+                    double[][][] wordP = new double[Globals.K][Globals.L][Globals.X];
+                    double accumulateWordP = 0.0;
+                    for (int z = 0; z < Globals.K; z++) {
+                        for (int l = 0; l < Globals.L; l++) {
+                            for (int x = 0; x < Globals.X; x++) {
+                                part1 = (newVP.nTopicInViewpoint[z] + chi) / (newVP.nTopicInViewpointSum + Globals.K * chi);
+                                part2 = (nWordInTopicViewpointSentiment[z][newVP.id][l][w.id] + beta) /
+                                        (nWordInTopicViewpointSentimentSum[z][newVP.id][l] + Globals.N * beta);
+                                part3 = (nWordJInX[w.id][x] + tau[x]) / (nWordJInXSum[w.id] + 1);
+                                if (w.x == 0) {
+                                    part4 = (nWordInTopicViewpointSentimentSum[z][newVP.id][l] + eta[l]) /
+                                            (nWordInTopicViewpointSentimentSum[z][newVP.id][1] +
+                                                    nWordInTopicViewpointSentimentSum[z][newVP.id][2] +
+                                                    nWordInTopicViewpointSentimentSum[z][newVP.id][3] + 1);
+                                } else {
+                                    if (wNext.x == w.x) {
+                                        part4 = (nWordJInX[wNext.id][wNext.x] + 1 + tau[wNext.x]) /
+                                                (nWordJInXSum[wNext.id] + 1 + 1);
+                                    } else {
+                                        part4 = (nWordJInX[wNext.id][wNext.x] + 0 + tau[wNext.x]) /
+                                                (nWordJInXSum[wNext.id] + 1 + 1);
+                                    }
+                                }
+                                accumulateWordP += part1 * part2 * part3 * part4;
+                                wordP[z][l][x] = accumulateWordP;
+                            }
+                        }
+                    }
+                    double sampleWordProb = accumulateWordP * rnd.nextDouble();
+                    int newZ, newL = 0, newX = 0;
+                    for (newZ = 0; newZ < Globals.K; newZ++) {
+                        for (newL = 0; newL < Globals.L; newL++) {
+                            for (newX = 0; newX < Globals.X; newX++) {
+                                if (sampleWordProb < wordP[newZ][newL][newX]) { break; }
+                            }
+                        }
+                    }
+                    w.topic = Globals.topics[newZ];
+                    w.sentiment = Globals.sentiments[newL];
+                    w.x = newX;
+                    newVP.nTopicInViewpoint[newZ]++;
+                    newVP.nTopicInViewpointSum++;
+                    nWordInTopicViewpointSentiment[newZ][newVP.id][newL][w.id]++;
+                    nWordInTopicViewpointSentimentSum[newZ][newVP.id][newL]++;
+                    nWordJInX[w.id][newX]++;
+                    nWordJInXSum[w.id]++;
                 }
             }
         }
-
-
     }
 
     private void doMStep() {
@@ -308,12 +375,11 @@ public class sCVR {
         // re-estimate pi
         for (int i = 0; i < Globals.I; i++) {
             for (int v = 0; v < Globals.V; v++) {
-                // TODO: do we need to add the ratingViewpointInItem here?? If not, I don't think there is any usage for updating ratingViewpoint
                 pi[i][v] = (Globals.items[i].nReviewViewpointInItem[v] + alpha) / (Globals.items[i].nReviewViewpointInItemSum + Globals.V * alpha);
             }
         }
 
-        // not sure whether it is necessary to update fai, mew or lambda
+        // it is not necessary to update fai, mew or lambda
 
         // maximize baseTheta from Eq.9
         for (User u : Globals.users) {
