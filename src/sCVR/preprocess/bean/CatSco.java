@@ -1,6 +1,4 @@
-package IR.Project.bean;
-
-import java.util.Comparator;
+package sCVR.preprocess.bean;
 
 /**
  * Created by Dylan on 4/27/17.

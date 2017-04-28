@@ -1,4 +1,4 @@
-package IR.Project.extractor;
+package sCVR.preprocess.extractor;
 
 
 import java.io.BufferedReader;

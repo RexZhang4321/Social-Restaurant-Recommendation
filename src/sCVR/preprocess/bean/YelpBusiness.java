@@ -1,9 +1,9 @@
-package IR.Project.bean;
+package sCVR.preprocess.bean;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class Business {
+public class YelpBusiness {
 	String business_id;
 	String  name;
 	String  neighborhood;
@@ -20,7 +20,7 @@ public class Business {
 	List<String> hours;
 	String type;
 	
-	public Business(){
+	public YelpBusiness(){
 		categories = new ArrayList<String>();
 	}
 	

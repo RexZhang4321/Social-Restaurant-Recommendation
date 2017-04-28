@@ -1,19 +1,15 @@
-package IR.Project.extractor;
+package sCVR.preprocess.extractor;
 
-import IR.Project.bean.Business;
-import IR.Project.bean.Review;
+import sCVR.preprocess.bean.YelpBusiness;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -34,11 +30,11 @@ public class CategoriesExtractor {
         BufferedReader br = new BufferedReader(isr);
         String line;
         
-        List<Business> reList = new ArrayList<Business>();
+        List<YelpBusiness> reList = new ArrayList<YelpBusiness>();
         Set<String> categories = new HashSet<String>();
         while ((line = br.readLine()) != null) {
             JSONObject review = new JSONObject(line);
-            Business r = new Business();
+            YelpBusiness r = new YelpBusiness();
             
             r.setBusiness_id((String) review.get("business_id"));
             if (review.has("categories") && !review.isNull("categories")) {

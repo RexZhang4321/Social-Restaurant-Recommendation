@@ -25,7 +25,6 @@ public class Globals {
     public static Concept concepts[];
     public static Topic topics[];
     public static Word words[];
-    public static Sentiment sentiments[];
     public static HashMap<Integer, HashMap<Integer, Review>> reviewMap;
 
 }

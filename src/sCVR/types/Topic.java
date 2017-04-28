@@ -5,7 +5,6 @@ package sCVR.types;
  */
 public class Topic {
 
-    public String topic;
     public int id;
     public double[] probW;//p(w|z)
     public double[] sstats;//n^w_z

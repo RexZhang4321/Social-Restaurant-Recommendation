@@ -9,6 +9,7 @@ import java.util.HashMap;
 public class User {
 
     public int id;
+    public String hashId;
     public ArrayList<User> friends;      // probably assuming trusted value is 1 once there is a friend
     public ArrayList<Review> reviews;
     public ArrayList<Item> items;

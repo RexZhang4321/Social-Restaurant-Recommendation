@@ -8,6 +8,7 @@ import java.util.ArrayList;
 public class Item {
     // for an item i
     public int id;
+    public String hashId;
     public ArrayList<Review> reviews;    // reviews from user u
 
     /* -------------- Gibbs Sampling Variables Start ------------ */

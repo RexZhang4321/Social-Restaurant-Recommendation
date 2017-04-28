@@ -1,10 +1,10 @@
-package IR.Project.bean;
+package sCVR.preprocess.bean;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class Review {
+public class YelpReview {
 	String review_id;
 	String user_id;
 	String business_id;

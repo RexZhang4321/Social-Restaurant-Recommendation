@@ -1,14 +1,14 @@
-package IR.Project.extractor;
+package sCVR.preprocess.extractor;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
+import sCVR.preprocess.bean.YelpReview;
 import org.json.JSONException;
 
-import IR.Project.bean.Review;
-import IR.Project.word2vec.CalW2V;
-import IR.Project.word2vec.GenW2V;
+import sCVR.preprocess.word2vec.CalW2V;
+import sCVR.preprocess.word2vec.GenW2V;
 
 public class ExtractProcess {
 	public static void main(String[] args) throws IOException, JSONException{
@@ -33,14 +33,14 @@ public class ExtractProcess {
 
 		System.out.println("category size " + categories.size());
 		//5th get reviews
-		List<Review> reviewList = ReviewExtractor.getReviews(certainReviewFile);
+		List<YelpReview> reviewList = ReviewExtractor.getReviews(certainReviewFile);
 		
 		//6th generate W2V model
 		String w2vFile = "/Users/Dylan/Downloads/glove.6B/glove.6B.300d.txt";
 		GenW2V.generate(w2vFile);
 		
 		//7th check concepts
-		for(Review r : reviewList){
+		for(YelpReview r : reviewList){
 //			System.out.println(r.getText());
 			String result = CalW2V.getBestScore(r.getTextList(),categories);
 			if(!result.equals("")){

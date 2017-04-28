@@ -1,6 +1,6 @@
-package IR.Project.extractor;
+package sCVR.preprocess.extractor;
 
-import IR.Project.bean.Review;
+import sCVR.preprocess.bean.YelpReview;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -16,21 +16,21 @@ import org.json.JSONObject;
 
 public class ReviewExtractor {
 	/*
-	 * General Review Extractor
+	 * General YelpReview Extractor
 	 * @fileName any yelp review file
 	 * @return review list
 	 */
-	public static List<Review> getReviews(String fileName) throws IOException, JSONException {
+	public static List<YelpReview> getReviews(String fileName) throws IOException, JSONException {
 		InputStream fis = new FileInputStream(fileName);
         InputStreamReader isr = new InputStreamReader(fis, Charset.forName("UTF-8"));
         BufferedReader br = new BufferedReader(isr);
         String line;
         
-        List<Review> reList = new ArrayList<Review>();
+        List<YelpReview> reList = new ArrayList<YelpReview>();
         
         while ((line = br.readLine()) != null) {
             JSONObject review = new JSONObject(line);
-            Review r = new Review();
+            YelpReview r = new YelpReview();
             
             r.setReview_id((String) review.get("review_id"));
             r.setUser_id((String) review.get("user_id"));
@@ -43,11 +43,11 @@ public class ReviewExtractor {
 	}
 	
 	public static void main(String[] args) throws IOException, JSONException {
-//		List<Review> reList = getReviews("/Users/Dylan/Downloads/yelp_dataset_challenge_round9/yelp_academic_dataset_review.json");
+//		List<YelpReview> reList = getReviews("/Users/Dylan/Downloads/yelp_dataset_challenge_round9/yelp_academic_dataset_review.json");
 		String reviewFile = "/Users/Dylan/Downloads/yelp_dataset_challenge_round9/yelp_academic_dataset_review.json";
-		List<Review> reList = getReviews(reviewFile);
+		List<YelpReview> reList = getReviews(reviewFile);
 
-//		for (Review t : reList) {
+//		for (YelpReview t : reList) {
 //			System.out.println(t.getText());
 //		}
 	}

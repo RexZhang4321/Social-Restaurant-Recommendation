@@ -1,11 +1,11 @@
-package IR.Project.word2vec;
+package sCVR.preprocess.word2vec;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Set;
 
-import IR.Project.bean.CatSco;
+import sCVR.preprocess.bean.CatSco;
 import org.deeplearning4j.models.word2vec.Word2Vec;
 
 public class CalW2V {

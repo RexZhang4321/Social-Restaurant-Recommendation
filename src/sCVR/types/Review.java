@@ -10,6 +10,7 @@ public class Review {
     // for a user review d
 
     public int id;
+    public String hashId;
     public User user;
     public Item item;
     public int rating;
@@ -17,7 +18,7 @@ public class Review {
     public Viewpoint reviewViewpoint;
     public Concept concept;
     public int topicCnt[];
-    public Sentiment sentiment;
+    public int sentiment;
     public ArrayList<Word> words;    // for words w in document d
 
     public Review() {

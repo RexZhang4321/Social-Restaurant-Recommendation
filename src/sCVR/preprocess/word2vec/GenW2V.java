@@ -1,4 +1,4 @@
-package IR.Project.word2vec;
+package sCVR.preprocess.word2vec;
 
 import java.io.File;
 

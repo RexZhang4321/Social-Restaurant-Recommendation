@@ -9,7 +9,7 @@ public class Word {
 
     public int id;
     public String word;
-    public Sentiment sentiment;
+    public int sentiment;
     public Topic topic;
     public int x;       // transition variable
 
