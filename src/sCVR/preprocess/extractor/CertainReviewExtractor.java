@@ -48,8 +48,8 @@ public class CertainReviewExtractor {
 	}
 	
 
-	public static void main(String[] args) throws IOException, JSONException {
-		Set<String> result = BusinessExtractor.getBusinessIds("/Users/Dylan/Documents/workspace/IRProject/src/ir/project/sample/PleasantHills.json");
-		extractReivew(result,"/Users/Dylan/Downloads/yelp_dataset_challenge_round9/yelp_academic_dataset_review.json", "/Users/Dylan/Documents/workspace/IRProject/src/ir/project/sample/reviewPleasantHills.json");
-	}
+//	public static void main(String[] args) throws IOException, JSONException {
+//		Set<String> result = BusinessExtractor.getBusinesses("/Users/Dylan/Documents/workspace/IRProject/src/ir/project/sample/PleasantHills.json");
+//		extractReivew(result,"/Users/Dylan/Downloads/yelp_dataset_challenge_round9/yelp_academic_dataset_review.json", "/Users/Dylan/Documents/workspace/IRProject/src/ir/project/sample/reviewPleasantHills.json");
+//	}
 }
