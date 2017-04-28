@@ -1,11 +1,14 @@
 package sCVR.preprocess;
 
+import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import sCVR.preprocess.bean.YelpBusiness;
 import sCVR.preprocess.bean.YelpReview;
 import sCVR.preprocess.bean.YelpUser;
 import sCVR.preprocess.extractor.BusinessExtractor;
 import sCVR.preprocess.extractor.ReviewExtractor;
 import sCVR.preprocess.extractor.UserExtractor;
+import sCVR.preprocess.nlp.SentimentCal;
+import sCVR.preprocess.word2vec.GenW2V;
 import sCVR.types.Globals;
 import sCVR.types.Item;
 import sCVR.types.Review;
@@ -25,8 +28,7 @@ public class Preprossor {
     private static String yelpBusinessFile = "/Users/Dylan/Downloads/yelp_dataset_challenge_round9/yelp_academic_dataset_business.json";
     private static String yelpUserFile = "/Users/Dylan/Downloads/yelp_dataset_challenge_round9/yelp_academic_dataset_user.json";
     private static String yelpReviewFile = "/Users/Dylan/Downloads/yelp_dataset_challenge_round9/yelp_academic_dataset_review.json";
-
-    private static String temporaryFile = "businessTemp.json";
+    private static String w2vFile = "/Users/Dylan/Downloads/glove.6B/glove.6B.300d.txt";
 
     private List<YelpReview> yelpReviews;
     private List<YelpUser> yelpUsers;
@@ -39,12 +41,13 @@ public class Preprossor {
     }
 
     public void preprocess(String city) throws IOException {
-//        CertainCityExtractor.genCityFile(yelpBusinessFile,temporaryFile,city);
         Set<String> businessIds = new HashSet<String>();
         Set<String> categories = new HashSet<String>();
         yelpBusinesses = BusinessExtractor.getBusinesses(yelpBusinessFile, city, businessIds, categories);
         Set<String> userIds = new HashSet<String>();
-        yelpReviews = ReviewExtractor.getReviews(yelpReviewFile, userIds, businessIds);
+        SentimentCal.init();
+		GenW2V.generate(w2vFile);
+        yelpReviews = ReviewExtractor.getReviews(yelpReviewFile, userIds, businessIds, categories);
         yelpUsers = UserExtractor.getUsers(yelpUserFile, userIds);
         yelpCategories = new ArrayList(categories);
 

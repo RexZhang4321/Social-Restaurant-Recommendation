@@ -1,5 +1,6 @@
 package sCVR.preprocess.extractor;
 
+import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import sCVR.preprocess.bean.YelpReview;
 
 import java.io.BufferedReader;
@@ -14,6 +15,8 @@ import java.util.Set;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import sCVR.preprocess.nlp.SentimentCal;
+import sCVR.preprocess.word2vec.CalW2V;
 
 public class ReviewExtractor {
 	/*
@@ -21,7 +24,7 @@ public class ReviewExtractor {
 	 * @fileName any yelp review file
 	 * @return review list
 	 */
-	public static List<YelpReview> getReviews(String fileName, Set<String> userIds, Set<String> businessIds) throws IOException, JSONException {
+	public static List<YelpReview> getReviews(String fileName, Set<String> userIds, Set<String> businessIds, Set<String> categories) throws IOException, JSONException {
 		InputStream fis = new FileInputStream(fileName);
         InputStreamReader isr = new InputStreamReader(fis, Charset.forName("UTF-8"));
         BufferedReader br = new BufferedReader(isr);
@@ -39,6 +42,9 @@ public class ReviewExtractor {
                 r.setUser_id(userid);
                 r.setBusiness_id((String) review.get("business_id"));
                 r.setText((String) review.get("text"));
+                r.setSentiment(SentimentCal.findSentiment(r.getText()));
+                String result = CalW2V.getBestScore(r.getTextList(),categories);
+                r.setConcept(result);
                 userIds.add(userid);
                 reList.add(r);
             }

@@ -16,9 +16,13 @@ public class YelpReview {
 	int funny;
 	int cool;
 	String type;
-	// concept(category)
-    // sentiment(0, 1, 2)
-	
+	String concept;
+	int sentiment;
+
+	public String getConcept() {return concept;}
+	public void setConcept(String concept) {this.concept = concept;}
+	public int getSentiment() {return sentiment;}
+	public void setSentiment(int sentiment) {this.sentiment = sentiment;}
 	public String getReview_id() {
 		return review_id;
 	}
@@ -54,7 +58,7 @@ public class YelpReview {
 	}
 	public void setText(String text) {
 		this.text = text;
-		textList = new ArrayList<String>(Arrays.asList(text.split(" ")));
+		textList = new ArrayList<String>(Arrays.asList(text.replaceAll("[^a-zA-Z' ]", " ").toLowerCase().split("\\s+")));
 	}
 	public int getUseful() {
 		return useful;
