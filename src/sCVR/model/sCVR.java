@@ -51,14 +51,8 @@ public class sCVR {
 
     /* -------------- Gibbs Sampling Variables End------------ */
 
-    public sCVR(ArrayList<Review> reviews, ArrayList<Item> items, ArrayList<User> users) {
-        setUpGlobals(reviews, items, users);
+    public sCVR() {
         init();
-    }
-
-    // do the linkage and setup globals
-    public void setUpGlobals(ArrayList<Review> reviews, ArrayList<Item> items, ArrayList<User> users) {
-
     }
 
     public void init() {
