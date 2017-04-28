@@ -9,18 +9,19 @@ import java.util.HashMap;
 public class Review {
     // for a user review d
 
-    public static HashMap<Integer, HashMap<Integer, Review>> reviewDocs;
-
     public int id;
     public User user;
     public Item item;
-    public Rating rating;
+    public int rating;
     public Viewpoint ratingViewpoint;
     public Viewpoint reviewViewpoint;
     public Concept concept;
+    public int topicCnt[];
+    public Sentiment sentiment;
     public ArrayList<Word> words;    // for words w in document d
 
     public Review() {
+        topicCnt = new int[Globals.K];
     }
 
 }

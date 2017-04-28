@@ -7,12 +7,12 @@ import java.util.HashMap;
  */
 public class Word {
 
-    public static HashMap<String, Integer> wordDic;
-
     public int id;
-    public Sentiment l;
-    public Topic z;
+    public String word;
+    public Sentiment sentiment;
+    public Topic topic;
     public int x;       // transition variable
 
-
+    public Word() {
+    }
 }
