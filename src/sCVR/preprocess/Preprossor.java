@@ -34,6 +34,10 @@ public class Preprossor {
 
     private List<String> yelpCategories;
 
+    public Preprossor() {
+
+    }
+
     public void preprocess(String city) throws IOException {
 //        CertainCityExtractor.genCityFile(yelpBusinessFile,temporaryFile,city);
         Set<String> businessIds = new HashSet<String>();
@@ -43,6 +47,9 @@ public class Preprossor {
         yelpReviews = ReviewExtractor.getReviews(yelpReviewFile, userIds, businessIds);
         yelpUsers = UserExtractor.getUsers(yelpUserFile, userIds);
         yelpCategories = new ArrayList(categories);
+
+        setUpGlobals();
+        doLink();
     }
 
     private void setUpGlobals() {
@@ -54,8 +61,7 @@ public class Preprossor {
         Globals.R = 6;
         Globals.L = 3;
         Globals.X = 3;
-//        Globals.N = ??;
-//        Globals.E = ??;
+        Globals.E = yelpCategories.size();
     }
 
     private void doLink() {
@@ -84,6 +90,8 @@ public class Preprossor {
             reviewHm.put(review.hashId, review.id);
             reviews.add(review);
         }
+
+        Globals.N = wordHm.size();
 
         // add to item arrayList
         for (YelpBusiness yelpBusiness : yelpBusinesses) {

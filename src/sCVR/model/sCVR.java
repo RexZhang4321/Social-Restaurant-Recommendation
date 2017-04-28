@@ -13,41 +13,41 @@ public class sCVR {
     private Random rnd;
     private final static long seed = 0;
 
-    public double alpha = 0.01;
-    public double sigma = 0.01;
-    public double chi = 0.01;
-    public double beta = 0.01;
-    public double tau[] = {0.3, 0.4, 0.3};
-    public double eta[] = {0.3, 0.4, 0.3};
+    private double alpha = 0.01;
+    private double sigma = 0.01;
+    private double chi = 0.01;
+    private double beta = 0.01;
+    private double tau[] = {0.3, 0.4, 0.3};
+    private double eta[] = {0.3, 0.4, 0.3};
 
-    public double pi[][];
+    private double pi[][];
 
     /* -------------- Gibbs Sampling Variables Start ------------ */
 
     // n_{z, l, v}^{w, -d}
     // number of word w in certain <z, v, l>
     // nWordInTopicViewpointSentiment[z][v][l][w]
-    public int[][][][] nWordInTopicViewpointSentiment;    // done
+    private int[][][][] nWordInTopicViewpointSentiment;    // done
 
     // n_{z, l, v}^{-d}
     // number of words have been assigned to this z, v, l
     // nWordInTopicViewpointSentimentSum[z][v][l]
-    public int[][][] nWordInTopicViewpointSentimentSum;  // done
+    private int[][][] nWordInTopicViewpointSentimentSum;  // done
 
     // n_{z, v}^{-j}
     // how many words are assigned to viewpoint v and topic z excluding w_j
     // nWordInTopicViewpoint[z][v]
-    public int[][] nWordInTopicViewpoint;    // done
+    private int[][] nWordInTopicViewpoint;    // done
 
     // n_{-j, x}^{w_j}
     // number of time word j has been assigned to x excluding current word
     // nWordJInX[w][x]
-    public int[][] nWordJInX; // done
+    private int[][] nWordJInX; // done
 
     // n_{-j}^{w_j}
     // number of times word j has been assigned to all x excluding current word
     // nWordJInXSum[w]
-    public int[] nWordJInXSum;    // done
+    private int[] nWordJInXSum;    // done
 
     /* -------------- Gibbs Sampling Variables End------------ */
 
@@ -55,7 +55,7 @@ public class sCVR {
         init();
     }
 
-    public void init() {
+    private void init() {
         rnd = new Random(seed);
 
 
@@ -403,7 +403,16 @@ public class sCVR {
     }
 
     public void predict(int uid, int iid) {
-
+        User user = Globals.users[uid];
+        double p[] = new double[Globals.R];
+        for (int r = 0; r < Globals.R; r++) {
+            for (int v = 0; v < Globals.V; v++) {
+                p[r] += user.thetaRatingViewpoint[r][v] * pi[iid][v];
+            }
+        }
+        for (int i = 0; i < p.length; i++) {
+            System.out.println("Prob@" + i + ": " + p[i]);
+        }
     }
 
 }

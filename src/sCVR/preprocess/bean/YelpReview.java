@@ -16,6 +16,8 @@ public class YelpReview {
 	int funny;
 	int cool;
 	String type;
+	// concept(category)
+    // sentiment(0, 1, 2)
 	
 	public String getReview_id() {
 		return review_id;
