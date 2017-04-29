@@ -6,9 +6,6 @@ package sCVR.types;
 public class Viewpoint {
 
     public int id;
-    public Concept concept;
-    public Topic topic;
-    public Sentiment sentiment;
 
     /* -------------- Gibbs Sampling Variables Start ------------ */
 
@@ -42,7 +39,8 @@ public class Viewpoint {
 
     /* -------------- Gibbs Sampling Variables End------------ */
 
-    public Viewpoint() {
+    public Viewpoint(int _id) {
+        id = _id;
         nRatingViewpointsForRating = new int[Globals.U][Globals.R];
         nRatingViewpointsForRatingSum = new int[Globals.U];
         nConceptInViewpoint = new int[Globals.E];

@@ -8,4 +8,8 @@ public class Topic {
     public int id;
     public double[] probW;//p(w|z)
     public double[] sstats;//n^w_z
+
+    public Topic(int _id) {
+        id = _id;
+    }
 }

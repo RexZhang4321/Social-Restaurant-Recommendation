@@ -23,6 +23,7 @@ public class Review {
 
     public Review() {
         topicCnt = new int[Globals.K];
+        words = new ArrayList<Word>();
     }
 
 }

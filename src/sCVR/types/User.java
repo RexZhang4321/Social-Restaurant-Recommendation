@@ -32,6 +32,9 @@ public class User {
     /* -------------- Gibbs Sampling Variables End------------ */
 
     public User() {
+        friends = new ArrayList<User>();
+        reviews = new ArrayList<Review>();
+        items = new ArrayList<Item>();
         nAllItemRatings = 0;
         theta0RatingViewpoint = new double[Globals.R][Globals.V];
         thetaRatingViewpoint = new double[Globals.R][Globals.V];

@@ -1,8 +1,11 @@
 package sCVR.model;
 
+import org.joda.time.LocalDateTime;
 import sCVR.types.*;
 import sCVR.Utils;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -18,7 +21,7 @@ public class sCVR {
     private double chi = 0.01;
     private double beta = 0.01;
     private double tau[] = {0.3, 0.4, 0.3};
-    private double eta[] = {0.3, 0.4, 0.3};
+    private double eta[] = {0.5, 0.5};
 
     private double pi[][];
 
@@ -33,11 +36,6 @@ public class sCVR {
     // number of words have been assigned to this z, v, l
     // nWordInTopicViewpointSentimentSum[z][v][l]
     private int[][][] nWordInTopicViewpointSentimentSum;  // done
-
-    // n_{z, v}^{-j}
-    // how many words are assigned to viewpoint v and topic z excluding w_j
-    // nWordInTopicViewpoint[z][v]
-    private int[][] nWordInTopicViewpoint;    // done
 
     // n_{-j, x}^{w_j}
     // number of time word j has been assigned to x excluding current word
@@ -58,13 +56,20 @@ public class sCVR {
     private void init() {
         rnd = new Random(seed);
 
-
+        Globals.viewpoints = new Viewpoint[Globals.V];
+        for (int v = 0; v < Globals.V; v++) {
+            Globals.viewpoints[v] = new Viewpoint(v);
+        }
+        Globals.topics = new Topic[Globals.K];
+        for (int z = 0; z < Globals.K; z++) {
+            Globals.topics[z] = new Topic(z);
+        }
+        Globals.reviewMap = new HashMap<Integer, HashMap<Integer, Review>>();
 
         pi = new double[Globals.I][Globals.V];
 
         nWordInTopicViewpointSentiment = new int[Globals.K][Globals.V][Globals.L][Globals.N];
         nWordInTopicViewpointSentimentSum = new int[Globals.K][Globals.V][Globals.L];
-        nWordInTopicViewpoint = new int[Globals.K][Globals.V];
         nWordJInX = new int[Globals.N][Globals.X];
         nWordJInXSum = new int[Globals.N];
 
@@ -73,16 +78,27 @@ public class sCVR {
             for (Review review : u.reviews) {
                 review.ratingViewpoint = Globals.viewpoints[rnd.nextInt(Globals.V)];
                 review.reviewViewpoint = Globals.viewpoints[rnd.nextInt(Globals.V)];
-                for (Word word : review.words) {
-                    word.topic = Globals.topics[rnd.nextInt(Globals.K)];
-                    word.sentiment = rnd.nextInt(Globals.L);
-                    word.x = rnd.nextInt(Globals.X);
-                    review.topicCnt[word.topic.id]++;
+                for (Word cur : review.words) {
+                    // -1 => 0, 0 => 1, 1 => 2
+                    if (Globals.conjWord.contains(cur.word)) {
+                        cur.x = 2;
+                    } else if (Globals.advWord.contains(cur.word)) {
+                        cur.x = 0;
+                    } else {
+                        cur.x = 1;
+                    }
+                    cur.topic = Globals.topics[rnd.nextInt(Globals.K)];
+                    review.topicCnt[cur.topic.id]++;
                 }
+                if (!Globals.reviewMap.containsKey(u.id)) {
+                    Globals.reviewMap.put(u.id, new HashMap<Integer, Review>());
+                }
+                Globals.reviewMap.get(u.id).put(review.item.id, review);
             }
             for (int r = 0; r < Globals.R; r++) {
                 for (int v = 0; v < Globals.V; v++) {
-                    u.theta0RatingViewpoint[r][v] = u.thetaRatingViewpoint[r][v] = 1 / (Globals.R * Globals.V);
+                    u.theta0RatingViewpoint[r][v] = 1.0 / (Globals.R);
+                    u.thetaRatingViewpoint[r][v] = 1.0 / (Globals.R);
                 }
             }
         }
@@ -103,10 +119,9 @@ public class sCVR {
             for (Review review : user.reviews) {
                 for (Word word : review.words) {
                     nWordInTopicViewpointSentiment[word.topic.id][review.reviewViewpoint.id][word.sentiment][word.id]++;
-                    nWordJInX[word.x][word.id]++;
+                    nWordJInX[word.id][word.x]++;
                     nWordJInXSum[word.id]++;
                     nWordInTopicViewpointSentimentSum[word.topic.id][review.reviewViewpoint.id][word.sentiment]++;
-                    nWordInTopicViewpoint[word.topic.id][review.reviewViewpoint.id]++;
                 }
             }
         }
@@ -124,11 +139,16 @@ public class sCVR {
     }
 
     public void inference(int nIter) {
+        System.out.println("Starting EM...");
+        DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm:ss");
         for (int i = 0; i < nIter; i++) {
+            System.out.println(LocalDateTime.now() + ": Iter " + (i + 1));
             doEStep();
+            System.out.println(LocalDateTime.now() + ": E-step done");
             doMStep();
+            System.out.println(LocalDateTime.now() + ": M-step done");
         }
-
+        System.out.println(LocalDateTime.now() + ": EM done");
     }
 
     private void doEStep() {
@@ -177,6 +197,15 @@ public class sCVR {
 
                 // sampling
                 for (int y = 0; y < Globals.V; y++) {
+//                    System.out.println(oldRatingViewpoint.nRatingViewpointsForRating[user.id][oldRating]);
+//                    System.out.println(user.thetaRatingViewpoint[oldRating][y]);
+//                    System.out.println(oldRatingViewpoint.nRatingViewpointsForRatingSum[user.id]);
+//                    System.out.println(user.nAllItemRatings);
+//                    System.out.println(user.thetaRatingViewpoint[oldRating][y]);
+//                    System.out.println(item.nRatingViewpointInItem[y]);
+//                    System.out.println(item.nReviewViewpointInItem[y]);
+//                    System.out.println(item.nRatingViewpointInItemSum);
+//                    System.out.println(item.nReviewViewpointInItemSum);
                     p_V[y] = ((oldRatingViewpoint.nRatingViewpointsForRating[user.id][oldRating] + user.thetaRatingViewpoint[oldRating][y]) /
                               (oldRatingViewpoint.nRatingViewpointsForRatingSum[user.id] + user.nAllItemRatings * user.thetaRatingViewpoint[oldRating][y]))
                              *
@@ -193,6 +222,9 @@ public class sCVR {
                 }
 
                 // update ss
+                if (newRatingViewpoint == Globals.V) {
+                    newRatingViewpoint--;
+                }
                 item.nRatingViewpointInItem[newRatingViewpoint] += relateToUser;
                 item.nRatingViewpointInItemSum += relateToUser;
                 Globals.viewpoints[newRatingViewpoint].nRatingViewpointsForRating[user.id][oldRating] += relateToItem;
@@ -225,8 +257,8 @@ public class sCVR {
                 }
                 */
                 for (Word word : oldReview.words) {
-                    nWordInTopicViewpointSentiment[word.topic.id][oldReviewViewpoint.id][oldReview.sentiment][word.id]--;
-                    nWordInTopicViewpointSentimentSum[word.topic.id][oldReviewViewpoint.id][oldReview.sentiment]--;
+                    nWordInTopicViewpointSentiment[word.topic.id][oldReviewViewpoint.id][word.sentiment][word.id]--;
+                    nWordInTopicViewpointSentimentSum[word.topic.id][oldReviewViewpoint.id][word.sentiment]--;
                     oldReviewViewpoint.nTopicInViewpoint[word.topic.id]--;
                     oldReviewViewpoint.nTopicInViewpointSum--;
                 }
@@ -265,6 +297,9 @@ public class sCVR {
                 for (newReviewViewpoint = 0; newReviewViewpoint < Globals.V; newReviewViewpoint++) {
                     if (sampleReviewViewpointProb < p_V[newReviewViewpoint]) { break; }
                 }
+                if (newReviewViewpoint == Globals.V) {
+                    newReviewViewpoint--;
+                }
 
                 // update ss
                 Viewpoint newVP = Globals.viewpoints[newReviewViewpoint];
@@ -273,10 +308,10 @@ public class sCVR {
                 newVP.nConceptInViewpoint[oldReview.concept.id]++;
                 newVP.nConceptInViewpointSum++;
                 for (Word word : oldReview.words) {
-                    nWordInTopicViewpointSentiment[word.topic.id][newReviewViewpoint][oldReview.sentiment][word.id]--;
-                    nWordInTopicViewpointSentimentSum[word.topic.id][newReviewViewpoint][oldReview.sentiment]--;
-                    oldReviewViewpoint.nTopicInViewpoint[word.topic.id]++;
-                    oldReviewViewpoint.nTopicInViewpointSum++;
+                    nWordInTopicViewpointSentiment[word.topic.id][newReviewViewpoint][word.sentiment][word.id]++;
+                    nWordInTopicViewpointSentimentSum[word.topic.id][newReviewViewpoint][word.sentiment]++;
+                    newVP.nTopicInViewpoint[word.topic.id]++;
+                    newVP.nTopicInViewpointSum++;
                 }
 
                 // update vars
@@ -289,13 +324,13 @@ public class sCVR {
                     // --------------- draw <z_j, l_j, x_j> from Eq.6 ---------------
 
                     // excluding word w_j
-                    newVP.nTopicInViewpoint[w.id]--;
+                    newVP.nTopicInViewpoint[w.topic.id]--;
                     newVP.nTopicInViewpointSum--;
-                    nWordInTopicViewpointSentiment[w.topic.id][newVP.id][oldReview.sentiment][w.id]--;
-                    nWordInTopicViewpointSentimentSum[w.topic.id][newVP.id][oldReview.sentiment]--;
+                    nWordInTopicViewpointSentiment[w.topic.id][newVP.id][w.sentiment][w.id]--;
+                    nWordInTopicViewpointSentimentSum[w.topic.id][newVP.id][w.sentiment]--;
                     nWordJInX[w.id][w.x]--;
                     nWordJInXSum[w.id]--;
-                    if (w.x != 0) {
+                    if (w.x != 0 && wNext.id != w.id) {
                         nWordJInX[wNext.id][wNext.x]--;
                         nWordJInXSum[wNext.id]--;
                     }
@@ -311,11 +346,10 @@ public class sCVR {
                                 part2 = (nWordInTopicViewpointSentiment[z][newVP.id][l][w.id] + beta) /
                                         (nWordInTopicViewpointSentimentSum[z][newVP.id][l] + Globals.N * beta);
                                 part3 = (nWordJInX[w.id][x] + tau[x]) / (nWordJInXSum[w.id] + 1);
-                                if (w.x == 0) {
+                                if (w.x == 1) {
                                     part4 = (nWordInTopicViewpointSentimentSum[z][newVP.id][l] + eta[l]) /
-                                            (nWordInTopicViewpointSentimentSum[z][newVP.id][1] +
-                                                    nWordInTopicViewpointSentimentSum[z][newVP.id][2] +
-                                                    nWordInTopicViewpointSentimentSum[z][newVP.id][3] + 1);
+                                            (nWordInTopicViewpointSentimentSum[z][newVP.id][0] +
+                                                    nWordInTopicViewpointSentimentSum[z][newVP.id][1] + 1);
                                 } else {
                                     if (wNext.x == w.x) {
                                         part4 = (nWordJInX[wNext.id][wNext.x] + 1 + tau[wNext.x]) /
@@ -327,17 +361,37 @@ public class sCVR {
                                 }
                                 accumulateWordP += part1 * part2 * part3 * part4;
                                 wordP[z][l][x] = accumulateWordP;
+                                //System.out.println("z: " + z + ", l: " + l + ", x: " + x + " : " + accumulateWordP);
                             }
                         }
                     }
                     double sampleWordProb = accumulateWordP * rnd.nextDouble();
                     int newZ, newL = 0, newX = 0;
+                    boolean breakFlg = false;
                     for (newZ = 0; newZ < Globals.K; newZ++) {
                         for (newL = 0; newL < Globals.L; newL++) {
                             for (newX = 0; newX < Globals.X; newX++) {
-                                if (sampleWordProb < wordP[newZ][newL][newX]) { break; }
+                                if (sampleWordProb < wordP[newZ][newL][newX]) {
+                                    breakFlg = true;
+                                    break;
+                                }
+                            }
+                            if (breakFlg) {
+                                break;
                             }
                         }
+                        if (breakFlg) {
+                            break;
+                        }
+                    }
+                    if (newZ == Globals.K) {
+                        newZ--;
+                        newL--;
+                        newX--;
+                    }
+                    if (w.x != 0 && wNext.id != w.id) {
+                        nWordJInX[wNext.id][wNext.x]++;
+                        nWordJInXSum[wNext.id]++;
                     }
                     w.topic = Globals.topics[newZ];
                     w.sentiment = newL;
@@ -365,7 +419,8 @@ public class sCVR {
                     int nFriends = friends.size();
                     double sumFriendsInfluence = 0.0;
                     for (User f : friends) {
-                        sumFriendsInfluence += User.trustValueU0U1.get(u).get(f.id) * f.thetaRatingViewpoint[r][v] / nFriends;
+                        /* assume User.trustValueU0U1.get(u).get(f.id) == 1 if there is a relationship*/
+                        sumFriendsInfluence += 1 * f.thetaRatingViewpoint[r][v] / nFriends;
                     }
                     sumFriendsInfluence += curUser.theta0RatingViewpoint[r][v];
                     curUser.thetaRatingViewpoint[r][v] = (Globals.viewpoints[v].nRatingViewpointsForRating[u][r] + sumFriendsInfluence) /
@@ -389,10 +444,10 @@ public class sCVR {
                 double numerator = 0.0;
                 double denominator = 0.0;
                 for (Viewpoint v : Globals.viewpoints) {
-                    numerator += Utils.digamma(v.nRatingViewpointsForRating[u.id][v.id] + u.thetaRatingViewpoint[r][v.id])
-                            - Utils.digamma(u.thetaRatingViewpoint[r][v.id]);
+                    numerator += Utils.digamma(v.nRatingViewpointsForRating[u.id][r] + u.thetaRatingViewpoint[r][v.id])
+                                - Utils.digamma(u.thetaRatingViewpoint[r][v.id]);
                     denominator += Utils.digamma(v.nRatingViewpointsForRatingSum[u.id] + u.nAllItemRatings * u.thetaRatingViewpoint[r][v.id])
-                            - Utils.digamma(u.nAllItemRatings * u.thetaRatingViewpoint[r][v.id]);
+                                - Utils.digamma(u.nAllItemRatings * u.thetaRatingViewpoint[r][v.id]);
                 }
                 double tmp = numerator / denominator;
                 for (int v = 0; v < Globals.V; v++) {

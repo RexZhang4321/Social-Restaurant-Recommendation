@@ -1,6 +1,8 @@
 package sCVR.types;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 
 /**
  * Created by RexZhang on 4/26/17.
@@ -26,5 +28,8 @@ public class Globals {
     public static Topic topics[];
     public static Word words[];
     public static HashMap<Integer, HashMap<Integer, Review>> reviewMap;
+
+    public static HashSet<String> conjWord = new HashSet<String>(Arrays.asList("and", "both"));
+    public static HashSet<String> advWord = new HashSet<String>(Arrays.asList("but", "whereas"));
 
 }

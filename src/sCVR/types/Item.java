@@ -9,6 +9,7 @@ public class Item {
     // for an item i
     public int id;
     public String hashId;
+    public int category; // only used for linking
     public ArrayList<Review> reviews;    // reviews from user u
 
     /* -------------- Gibbs Sampling Variables Start ------------ */
@@ -45,6 +46,7 @@ public class Item {
     /* -------------- Gibbs Sampling Variables End------------ */
 
     public Item() {
+        reviews = new ArrayList<Review>();
         nRatingViewpointInItem = new int[Globals.V];
         nRatingViewpointInItemSum = 0;
         nReviewViewpointInItem = new int[Globals.V];
