@@ -44,8 +44,10 @@ public class UserExtractor {
                     JSONArray friendArr = (JSONArray) reviewObj.get("friends");
                     List<String> friendList = new ArrayList<String>();
                     for (int i = 0; i < friendArr.length(); i++) {
-                        String currFri = friendArr.getString(i);
-                        friendList.add(currFri);
+                        if(!"None".equals(friendArr.getString(i))) {
+                            String currFri = friendArr.getString(i);
+                            friendList.add(currFri);
+                        }
                     }
                     user.setFriends(friendList);
                 }
@@ -56,7 +58,9 @@ public class UserExtractor {
                 obj.put("user_id", user.getUser_id());
                 JSONArray friendArray = new JSONArray();
                 for(String c : user.getFriends()){
-                    friendArray.put(c);
+                    if(!"None".equals(c)) {
+                        friendArray.put(c);
+                    }
                 }
                 obj.put("friends", friendArray);
                 bw.write(obj.toString());

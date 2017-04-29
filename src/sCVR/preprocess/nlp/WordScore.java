@@ -54,6 +54,11 @@ public class WordScore {
             for(String[] c : curr){
                 System.out.println(c[0] + " " + c[1]);
                 if(c[1].matches("^[a-zA-Z0-9']+$")){
+                    if(Integer.parseInt(c[0]) >= 3){
+                        c[0] = "1";
+                    }else{
+                        c[0] = "0";
+                    }
                     result.add(c);
                 }
             }

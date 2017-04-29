@@ -34,21 +34,24 @@ public class ReviewExtractor {
         FileWriter fw = new FileWriter(tempFile);
         BufferedWriter bw = new BufferedWriter(fw);
 
+        int lineNumber = 0;
         while ((line = br.readLine()) != null) {
             JSONObject review = new JSONObject(line);
 
             if(businessIds.contains((String) review.get("business_id"))) {
+                System.out.println("Review Number ::" + ++lineNumber);
                 YelpReview r = new YelpReview();
                 String userid = (String) review.get("user_id");
                 r.setReview_id((String) review.get("review_id"));
                 r.setUser_id(userid);
+                r.setRate((Integer) review.get("stars"));
                 r.setBusiness_id((String) review.get("business_id"));
                 r.setText((String) review.get("text"));
                 System.out.println("userid :: " + userid + " wordScores done");
                 r.setSentiment(SentimentCal.findSentiment(r.getText()));
                 String result = CalW2V.getBestScore(r.getTextList(),categories);
-                System.out.println("userid :: " + userid + " concept :: " + r.getConcept());
                 r.setConcept(result);
+                System.out.println("userid :: " + userid + " concept :: " + r.getConcept());
                 userIds.add(userid);
                 reList.add(r);
 
@@ -58,12 +61,7 @@ public class ReviewExtractor {
                 obj.put("review_id", r.getReview_id());
                 obj.put("user_id", r.getUser_id());
                 obj.put("business_id", r.getBusiness_id());
-
-                JSONArray textJson = new JSONArray();
-                for(String c : r.getTextList()){
-                    textJson.put(c);
-                }
-                obj.put("textList", textJson);
+                obj.put("rate", r.getRate());
 
                 obj.put("concept", r.getConcept());
                 obj.put("sentiment", r.getSentiment());

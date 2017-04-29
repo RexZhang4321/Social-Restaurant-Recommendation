@@ -22,6 +22,15 @@ public class YelpReview {
 	String concept;//
 	int sentiment; //
 	List<String[]> wordScores; //
+	int rate;//
+
+	public int getRate() {
+		return rate;
+	}
+
+	public void setRate(int rate) {
+		this.rate = rate;
+	}
 
 	public List<String[]> getWordScores() {
 		return wordScores;
