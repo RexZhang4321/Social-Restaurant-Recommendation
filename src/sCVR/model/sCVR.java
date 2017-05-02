@@ -480,29 +480,22 @@ public class sCVR {
         // it is not necessary to update fai, mew or lambda
 
         // maximize baseTheta from Eq.9
-
+        /*
         for (User u : Globals.users) {
-            if (u.id == 25) {
-                System.out.println("warn");
-            }
             for (int r = 0; r < Globals.R; r++) {
-                double nominator = 0.0;
+                double numerator = 0.0;
                 double denominator = 0.0;
                 for (Viewpoint v : Globals.viewpoints) {
-                    System.out.println(Utils.digamma(v.nRatingViewpointsForRating[u.id][r] + u.thetaRatingViewpoint[r][v.id]));
-                    System.out.println(Utils.digamma(u.thetaRatingViewpoint[r][v.id]));
-                    nominator += Utils.digamma(v.nRatingViewpointsForRating[u.id][r] + u.thetaRatingViewpoint[r][v.id]) - Utils.digamma(u.thetaRatingViewpoint[r][v.id]);
+                    numerator += Utils.digamma(v.nRatingViewpointsForRating[u.id][r] + u.thetaRatingViewpoint[r][v.id]) - Utils.digamma(u.thetaRatingViewpoint[r][v.id]);
                     denominator += Utils.digamma(v.nRatingViewpointsForRatingSum[u.id] + u.nAllItemRatings * u.thetaRatingViewpoint[r][v.id]) - Utils.digamma(u.nAllItemRatings * u.thetaRatingViewpoint[r][v.id]);
                 }
-                if (denominator < 0.01) {
-                    System.out.println("???");
-                }
-                double tmp = (nominator) / (denominator);
+                double tmp = (numerator) / (denominator);
                 for (int v = 0; v < Globals.V; v++) {
                     u.theta0RatingViewpoint[r][v] = u.theta0RatingViewpoint[r][v] * tmp;
                 }
             }
         }
+        */
 
     }
 
