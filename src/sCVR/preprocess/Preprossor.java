@@ -268,7 +268,7 @@ public class Preprossor {
                 yelpReview.setBusiness_id(yReview.getString("business_id"));
                 yelpReview.setUser_id(yReview.getString("user_id"));
                 yelpReview.setReview_id(yReview.getString("review_id"));
-                yelpReview.setConcept(yReview.getString("concept"));
+                //yelpReview.setConcept(yReview.getString("concept"));
                 yelpReview.setStar(yReview.getInt("rate"));
                 JSONArray tmparr = yReview.getJSONArray("wordscore");
                 List<String[]> tmplist = new ArrayList<String[]>();

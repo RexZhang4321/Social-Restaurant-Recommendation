@@ -480,7 +480,7 @@ public class sCVR {
         // it is not necessary to update fai, mew or lambda
 
         // maximize baseTheta from Eq.9
-        /*
+
         for (User u : Globals.users) {
             if (u.id == 25) {
                 System.out.println("warn");
@@ -503,7 +503,7 @@ public class sCVR {
                 }
             }
         }
-        */
+
     }
 
     public int predict(int uid, int iid, boolean show) {
@@ -623,21 +623,21 @@ public class sCVR {
                 }
             }
         }
-//        for (int i = 0; i < Globals.K; i++) {
-//            int maxloop = 20;
-//            System.out.print("Topic #" + i + ": ");
-//            for (String w: topicVSword.get(i).keySet()) {
-//                System.out.print(w + ", ");
-//                if (maxloop < 0) {
-//                    break;
-//                } else {
-//                    maxloop--;
-//                }
-//            }
-//            System.out.println();
-//        }
+        for (int i = 0; i < Globals.K; i++) {
+            int maxloop = 20;
+            System.out.print("Topic #" + i + ": ");
+            for (String w: topicVSword.get(i).keySet()) {
+                System.out.print(w + ", ");
+                if (maxloop < 0) {
+                    break;
+                } else {
+                    maxloop--;
+                }
+            }
+            System.out.println();
+        }
         for (int i = 0 ; i < Globals.E; i++) {
-//            System.out.print(Globals.concepts[i].concept + ": ");
+            System.out.print(Globals.concepts[i].concept + ": ");
             int maxidx = 0;
             int maxval = Integer.MIN_VALUE;
             for (int j = 0; j < conceptVStopic[i].length; j++) {
@@ -655,15 +655,15 @@ public class sCVR {
                 words[widx] = wordAll[rnd.nextInt(wordAll.length)];
             }
             topicWordsHashMap.put(Globals.topics[maxidx], words);
-//            for (String w : topicVSword.get(maxidx).keySet()) {
-//                System.out.print(w + ", ");
-//                if (maxloop < 0) {
-//                    break;
-//                } else {
-//                    maxloop--;
-//                }
-//            }
-//            System.out.println();
+            for (String w : topicVSword.get(maxidx).keySet()) {
+                System.out.print(w + ", ");
+                if (maxloop < 0) {
+                    break;
+                } else {
+                    maxloop--;
+                }
+            }
+            System.out.println();
         }
     }
 
