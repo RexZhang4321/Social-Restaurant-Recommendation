@@ -1,5 +1,6 @@
 package sCVR.model;
 
+import javafx.util.Pair;
 import org.joda.time.LocalDateTime;
 import sCVR.types.*;
 import sCVR.Utils;
@@ -11,7 +12,6 @@ import java.io.ObjectOutputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.stream.IntStream;
 
 /**
  * Created by RexZhang on 4/10/17.
@@ -191,7 +191,6 @@ public class sCVR {
     private void doEStep() {
         double p_V[] = new double[Globals.V];
         for (User user : Globals.users) {
-            // TODO not sure whether we should calculate this once per iteration or we just calculate it at the very beginning
             // Compute Eq.4 to get the updated user-rating-viewpoint distribution
             // Since for current user, we only need to update his thetaUserRatingViewpoint once with his social relation
             // we assume trusted value is either 1 or 0
@@ -300,32 +299,32 @@ public class sCVR {
                     oldReviewViewpoint.nTopicInViewpointSum--;
                 }
 
-                // TODO: may need to convert to log space
+                // TODO: need to convert to log space
                 for (int v = 0; v < Globals.V; v++) {
                     Viewpoint curVP = Globals.viewpoints[v];
-                    double viewpointPart = (item.nReviewViewpointInItem[v] + item.nRatingViewpointInItem[v] + alpha) /
-                            (item.nReviewViewpointInItemSum + item.nRatingViewpointInItemSum + Globals.V * alpha);
+                    double viewpointPart = Math.log((item.nReviewViewpointInItem[v] + item.nRatingViewpointInItem[v] + alpha) /
+                            (item.nReviewViewpointInItemSum + item.nRatingViewpointInItemSum + Globals.V * alpha));
                     double conceptPart = 0.0;
                     for (int e = 0; e < Globals.E; e++) {
-                        conceptPart += (curVP.nConceptInViewpoint[e] + sigma) / (curVP.nConceptInViewpointSum + Globals.E * sigma);
+                        conceptPart += Math.log((curVP.nConceptInViewpoint[e] + sigma) / (curVP.nConceptInViewpointSum + Globals.E * sigma));
                     }
                     double topicPart = 0.0;
                     double tmpTopicPart;
                     double sentimentWordPart = 0.0;
                     double wordPart;
                     for (int z = 0; z < Globals.K; z++) {
-                        tmpTopicPart = (curVP.nTopicInViewpoint[z] + chi) / (curVP.nTopicInViewpointSum + Globals.K * chi);
+                        tmpTopicPart = Math.log((curVP.nTopicInViewpoint[z] + chi) / (curVP.nTopicInViewpointSum + Globals.K * chi));
                         for (int l = 0; l < Globals.L; l++) {
                             wordPart = 0.0;
                             for (Word word : oldReview.words) {
-                                wordPart += (nWordInTopicViewpointSentiment[z][v][l][word.id] + beta) /
-                                        (nWordInTopicViewpointSentimentSum[z][v][l] + Globals.N * beta);
+                                wordPart += Math.log((nWordInTopicViewpointSentiment[z][v][l][word.id] + beta) /
+                                        (nWordInTopicViewpointSentimentSum[z][v][l] + Globals.N * beta));
                             }
                             sentimentWordPart += wordPart;
                         }
-                        topicPart += tmpTopicPart * sentimentWordPart;
+                        topicPart += tmpTopicPart + sentimentWordPart;
                     }
-                    p_V[v] = viewpointPart * conceptPart * topicPart;
+                    p_V[v] = viewpointPart + conceptPart + topicPart;
                 }
                 for (int v = 1; v < Globals.V; v++) {
                     p_V[v] += p_V[v - 1];
@@ -333,7 +332,7 @@ public class sCVR {
                 double sampleReviewViewpointProb = rnd.nextDouble() * p_V[Globals.V - 1];
                 int newReviewViewpoint;
                 for (newReviewViewpoint = 0; newReviewViewpoint < Globals.V; newReviewViewpoint++) {
-                    if (sampleReviewViewpointProb < p_V[newReviewViewpoint]) { break; }
+                    if (sampleReviewViewpointProb > p_V[newReviewViewpoint]) { break; }
                 }
                 if (newReviewViewpoint == Globals.V) {
                     newReviewViewpoint--;
@@ -384,7 +383,7 @@ public class sCVR {
                                 part2 = (nWordInTopicViewpointSentiment[z][newVP.id][l][w.id] + beta) /
                                         (nWordInTopicViewpointSentimentSum[z][newVP.id][l] + Globals.N * beta);
                                 part3 = (nWordJInX[w.id][x] + tau[x]) / (nWordJInXSum[w.id] + 1);
-                                if (w.x == 1) {
+                                if (w.x == 0) {
                                     part4 = (nWordInTopicViewpointSentimentSum[z][newVP.id][l] + eta[l]) /
                                             (nWordInTopicViewpointSentimentSum[z][newVP.id][0] +
                                                     nWordInTopicViewpointSentimentSum[z][newVP.id][1] + 1);
@@ -449,16 +448,20 @@ public class sCVR {
         // re-estimate theta, pi, fai, mew, lambda from Eq. 8
 
         // re-estimate theta
+        double sumFriendsInfluence = 0.0;
         for (int u = 0; u < Globals.U; u++) {
+            if (u == 25) {
+                System.out.println("warn");
+            }
             for (int r = 0; r < Globals.R; r++) {
                 for (int v = 0; v < Globals.V; v++) {
                     User curUser = Globals.users[u];
                     ArrayList<User> friends = curUser.friends;
                     int nFriends = friends.size();
-                    double sumFriendsInfluence = 0.0;
+                    sumFriendsInfluence = 0.0;
                     for (User f : friends) {
                         /* assume User.trustValueU0U1.get(u).get(f.id) == 1 if there is a relationship*/
-                        sumFriendsInfluence += 1 * f.thetaRatingViewpoint[r][v] / nFriends;
+                        sumFriendsInfluence += 1.0 / nFriends * f.thetaRatingViewpoint[r][v] / nFriends;
                     }
                     sumFriendsInfluence += curUser.theta0RatingViewpoint[r][v];
                     curUser.thetaRatingViewpoint[r][v] = (Globals.viewpoints[v].nRatingViewpointsForRating[u][r] + sumFriendsInfluence) /
@@ -477,25 +480,33 @@ public class sCVR {
         // it is not necessary to update fai, mew or lambda
 
         // maximize baseTheta from Eq.9
+        /*
         for (User u : Globals.users) {
+            if (u.id == 25) {
+                System.out.println("warn");
+            }
             for (int r = 0; r < Globals.R; r++) {
-                double numerator = 0.0;
+                double nominator = 0.0;
                 double denominator = 0.0;
                 for (Viewpoint v : Globals.viewpoints) {
-                    numerator += Utils.digamma(v.nRatingViewpointsForRating[u.id][r] + u.thetaRatingViewpoint[r][v.id])
-                                - Utils.digamma(u.thetaRatingViewpoint[r][v.id]);
-                    denominator += Utils.digamma(v.nRatingViewpointsForRatingSum[u.id] + u.nAllItemRatings * u.thetaRatingViewpoint[r][v.id])
-                                - Utils.digamma(u.nAllItemRatings * u.thetaRatingViewpoint[r][v.id]);
+                    System.out.println(Utils.digamma(v.nRatingViewpointsForRating[u.id][r] + u.thetaRatingViewpoint[r][v.id]));
+                    System.out.println(Utils.digamma(u.thetaRatingViewpoint[r][v.id]));
+                    nominator += Utils.digamma(v.nRatingViewpointsForRating[u.id][r] + u.thetaRatingViewpoint[r][v.id]) - Utils.digamma(u.thetaRatingViewpoint[r][v.id]);
+                    denominator += Utils.digamma(v.nRatingViewpointsForRatingSum[u.id] + u.nAllItemRatings * u.thetaRatingViewpoint[r][v.id]) - Utils.digamma(u.nAllItemRatings * u.thetaRatingViewpoint[r][v.id]);
                 }
-                double tmp = numerator / denominator;
+                if (denominator < 0.01) {
+                    System.out.println("???");
+                }
+                double tmp = (nominator) / (denominator);
                 for (int v = 0; v < Globals.V; v++) {
                     u.theta0RatingViewpoint[r][v] = u.theta0RatingViewpoint[r][v] * tmp;
                 }
             }
         }
+        */
     }
 
-    public void predict(int uid, int iid) {
+    public int predict(int uid, int iid, boolean show) {
         User user = Globals.users[uid];
         double p[] = new double[Globals.R];
         for (int r = 0; r < Globals.R; r++) {
@@ -503,13 +514,97 @@ public class sCVR {
                 p[r] += user.thetaRatingViewpoint[r][v] * pi[iid][v];
             }
         }
+        int maxidx = 2;
+        Double maxp = p[0];
         for (int i = 0; i < p.length; i++) {
-            System.out.println("Prob@" + i + ": " + p[i]);
+            if (show) {
+                System.out.println("Prob@" + i + ": " + p[i]);
+            }
+            if (p[i] > maxp) {
+                maxp = p[i];
+                maxidx = i;
+            }
+        }
+        return maxidx;
+    }
+
+    public void recommendForUser(int uid, HashMap<Concept, Topic> conceptTopicHashMap, HashMap<Topic, String[]> topicWordsHashMap) {
+        User user = Globals.users[uid];
+        PriorityQueue<Pair<Item, Integer>> heap = new PriorityQueue<>(new Comparator<Pair<Item, Integer>>() {
+            @Override
+            public int compare(Pair<Item, Integer> o1, Pair<Item, Integer> o2) {
+                if (o1.getValue() > o2.getValue()) {
+                    return 1;
+                } else {
+                    return -1;
+                }
+            }
+        });
+        HashSet<Item> usedItem = new HashSet<>();
+        for (Review review : user.reviews) {
+            usedItem.add(review.item);
+        }
+        for (Item item : Globals.items) {
+            if (!usedItem.contains(item)) {
+                int rating = predict(uid, item.id, false);
+                heap.add(new Pair<>(item, rating));
+            }
+        }
+        System.out.println("For user " + uid);
+        for (int i = 0; i < 5; i++) {
+            Pair<Item, Integer> tmp = heap.poll();
+            System.out.println("Item " + tmp.getKey().id + " , predicting rating: " + tmp.getValue());
+            // from rating get viewpoint
+            int vp = 0;
+            double vpval = 0.0;
+            double[] vpprobs = Globals.users[uid].thetaRatingViewpoint[tmp.getValue()];
+            for (int vpidx = 0; vpidx < vpprobs.length; vpidx++) {
+                if (vpprobs[vpidx] > vpval) {
+                    vpval = vpprobs[vpidx];
+                    vp = vpidx;
+                }
+            }
+            // from viewpoint get concept
+            int conceptId = 0;
+            int conceptCnt = 0;
+            int[] ccnts = Globals.viewpoints[vp].nConceptInViewpoint;
+            for (int cidx = 0; cidx < ccnts.length; cidx++) {
+                if (ccnts[cidx] > conceptCnt) {
+                    conceptCnt = ccnts[cidx];
+                    conceptId = cidx;
+                }
+            }
+            System.out.println("Reason: ");
+            Concept concept = Globals.concepts[conceptId];
+            System.out.println("Concept: " + concept.concept);
+            // from concept get topic
+            Topic topic = conceptTopicHashMap.get(concept);
+            System.out.print("Topic #" + topic.id);
+            // from topic get words
+            System.out.println(" : " + Arrays.toString(topicWordsHashMap.get(topic)));
         }
     }
 
-    public void collectStats() {
-        ArrayList<HashMap<String, Integer>> topicVSword = new ArrayList<HashMap<String, Integer>>();
+    public void evaluate() {
+        double RMSE = 0.0;
+        double MAE = 0.0;
+        int totalItem = 0;
+        for (User user : Globals.users) {
+            for (Review review : user.reviews) {
+                RMSE += Math.pow((review.rating - predict(user.id, review.item.id, false)), 2);
+                MAE += Math.abs(review.rating - predict(user.id, review.item.id, false));
+                totalItem++;
+            }
+        }
+        RMSE = Math.sqrt(RMSE / totalItem);
+        MAE = Math.sqrt(MAE / totalItem);
+        System.out.println("RMSE: " + RMSE);
+        System.out.println("MAE: " + MAE);
+    }
+
+    public void collectStats(HashMap<Concept, Topic> conceptTopicHashMap, HashMap<Topic, String[]> topicWordsHashMap) {
+        rnd = new Random(0);
+        ArrayList<HashMap<String, Integer>> topicVSword = new ArrayList<>();
         int[][] conceptVStopic = new int[Globals.E][Globals.K];
         for (int i = 0; i < Globals.K; i++) {
             topicVSword.add(new HashMap<String, Integer>());
@@ -528,21 +623,21 @@ public class sCVR {
                 }
             }
         }
-        for (int i = 0; i < Globals.K; i++) {
-            int maxloop = 20;
-            System.out.print("Topic #" + i + ": ");
-            for (String w: topicVSword.get(i).keySet()) {
-                System.out.print(w + ", ");
-                if (maxloop < 0) {
-                    break;
-                } else {
-                    maxloop--;
-                }
-            }
-            System.out.println();
-        }
+//        for (int i = 0; i < Globals.K; i++) {
+//            int maxloop = 20;
+//            System.out.print("Topic #" + i + ": ");
+//            for (String w: topicVSword.get(i).keySet()) {
+//                System.out.print(w + ", ");
+//                if (maxloop < 0) {
+//                    break;
+//                } else {
+//                    maxloop--;
+//                }
+//            }
+//            System.out.println();
+//        }
         for (int i = 0 ; i < Globals.E; i++) {
-            System.out.print(Globals.concepts[i].concept + ": ");
+//            System.out.print(Globals.concepts[i].concept + ": ");
             int maxidx = 0;
             int maxval = Integer.MIN_VALUE;
             for (int j = 0; j < conceptVStopic[i].length; j++) {
@@ -551,16 +646,24 @@ public class sCVR {
                     maxval = conceptVStopic[i][j];
                 }
             }
-            int maxloop = 20;
-            for (String w : topicVSword.get(maxidx).keySet()) {
-                System.out.print(w + ", ");
-                if (maxloop < 0) {
-                    break;
-                } else {
-                    maxloop--;
-                }
+            conceptTopicHashMap.put(Globals.concepts[i], Globals.topics[maxidx]);
+            String[] words = new String[10];
+            int maxloop = 10;
+            Set<String> wordSet = topicVSword.get(maxidx).keySet();
+            String[] wordAll = wordSet.toArray(new String[wordSet.size()]);
+            for (int widx = 0; widx < maxloop; widx++) {
+                words[widx] = wordAll[rnd.nextInt(wordAll.length)];
             }
-            System.out.println();
+            topicWordsHashMap.put(Globals.topics[maxidx], words);
+//            for (String w : topicVSword.get(maxidx).keySet()) {
+//                System.out.print(w + ", ");
+//                if (maxloop < 0) {
+//                    break;
+//                } else {
+//                    maxloop--;
+//                }
+//            }
+//            System.out.println();
         }
     }
 

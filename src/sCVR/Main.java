@@ -2,8 +2,11 @@ package sCVR;
 
 import sCVR.preprocess.Preprossor;
 import sCVR.model.sCVR;
+import sCVR.types.Concept;
+import sCVR.types.Topic;
 
 import java.io.FileInputStream;
+import java.util.HashMap;
 import java.util.Properties;
 import java.util.Scanner;
 
@@ -28,9 +31,11 @@ public class Main {
         try {
             preprossor.preprocess("Pleasant Hills", true);
             sCVR msCVR = new sCVR();
+            HashMap<Concept, Topic> conceptTopicHashMap = new HashMap<>();
+            HashMap<Topic, String[]> topicWordsHashMap = new HashMap<>();
             if (args[0].equals("read")) {
                 msCVR.readModel();
-                msCVR.collectStats();
+                msCVR.collectStats(conceptTopicHashMap, topicWordsHashMap);
             } else {
                 msCVR.inference(niters);
                 System.out.println("Model trained.");
@@ -38,11 +43,15 @@ public class Main {
                 msCVR.saveModel();
                 System.out.println("Model saved.");
             }
+            msCVR.evaluate();
             while (true) {
                 int uid = scanner.nextInt();
                 int iid = scanner.nextInt();
                 System.out.println("Query uid: " + uid + ", iid: " + iid + ":");
-                msCVR.predict(uid, iid);
+                msCVR.predict(uid, iid, true);
+                if (args[0].equals("read")) {
+                    msCVR.recommendForUser(uid, conceptTopicHashMap, topicWordsHashMap);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
