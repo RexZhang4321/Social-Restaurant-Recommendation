@@ -6,11 +6,6 @@ import org.json.JSONObject;
 import sCVR.preprocess.bean.YelpBusiness;
 import sCVR.preprocess.bean.YelpReview;
 import sCVR.preprocess.bean.YelpUser;
-import sCVR.preprocess.extractor.BusinessExtractor;
-import sCVR.preprocess.extractor.ReviewExtractor;
-import sCVR.preprocess.extractor.UserExtractor;
-import sCVR.preprocess.nlp.SentimentCal;
-import sCVR.preprocess.word2vec.GenW2V;
 import sCVR.types.Globals;
 import sCVR.types.Item;
 import sCVR.types.Review;
@@ -21,7 +16,6 @@ import java.nio.charset.Charset;
 import java.util.*;
 import sCVR.types.*;
 
-import javax.json.Json;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -36,10 +30,10 @@ public class Preprossor {
     private static String yelpReviewFile = "/Users/Dylan/Downloads/yelp_dataset_challenge_round9/yelp_academic_dataset_review.json";
     private static String w2vFile = "/Users/Dylan/Downloads/glove.6B/glove.6B.300d.txt";
 
-    private static String reviewTemp = baseDir + "/data/reviewTemp2.json";
-    private static String userTemp = baseDir + "/data/userTemp2.json";
-    private static String businessTemp = baseDir + "/data/businessTemp2.json";
-    private static String categoryTemp = baseDir + "/data/categoryTemp2.json";
+    private static String reviewTemp = baseDir + "/data/reviewTemp_100.json";
+    private static String userTemp = baseDir + "/data/userTemp_100.json";
+    private static String businessTemp = baseDir + "/data/businessTemp_100.json";
+    private static String categoryTemp = baseDir + "/data/categoryTemp_100.json";
 
     private List<YelpReview> yelpReviews;
     private List<YelpUser> yelpUsers;
@@ -48,24 +42,51 @@ public class Preprossor {
     private List<String> yelpCategories;
 
     public Preprossor() {
+        try {
+            Properties properties = new Properties();
+            FileInputStream in = new FileInputStream("config.txt");
+            properties.load(in);
+            in.close();
+            if (!properties.get("YELP_BUSINESS_FILE").equals("")) {
+                yelpBusinessFile = properties.getProperty("YELP_BUSINESS_FILE");
+            }
+            if (!properties.get("YELP_USER_FILE").equals("")) {
+                yelpUserFile = properties.getProperty("YELP_USER_FILE");
+            }
+            if (!properties.get("YELP_REVIEW_FILE").equals("")) {
+                yelpReviewFile = properties.getProperty("YELP_REVIEW_FILE");
+            }
+            if (!properties.get("WORD2VEC_FILE").equals("")) {
+                w2vFile = properties.getProperty("WORD2VEC_FILE");
+            }
+            reviewTemp = properties.getProperty("REVIEW_JSON");
+            userTemp = properties.getProperty("USER_JSON");
+            businessTemp = properties.getProperty("BUSINESS_JSON");
+            categoryTemp = properties.getProperty("CATEGORY_JSON");
+            Globals.K = Integer.parseInt(properties.getProperty("K"));
+            Globals.V = Integer.parseInt(properties.getProperty("V"));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
     }
 
     public void preprocess(String city, boolean fromFile) throws IOException {
-        if (!fromFile) {
-            Set<String> businessIds = new HashSet<String>();
-            Set<String> categories = new HashSet<String>();
-            yelpBusinesses = BusinessExtractor.getBusinesses(yelpBusinessFile, city, businessIds, categories, businessTemp);
-            Set<String> userIds = new HashSet<String>();
-            SentimentCal.init();
-            GenW2V.generate(w2vFile);
-            yelpReviews = ReviewExtractor.getReviews(yelpReviewFile, userIds, businessIds, categories, reviewTemp);
-            yelpUsers = UserExtractor.getUsers(yelpUserFile, userIds, userTemp);
-            yelpCategories = new ArrayList(categories);
-            categoryJsonParsor(yelpCategories, categoryTemp);
-        } else {
-            preprocessFromFile();
-        }
+//        if (!fromFile) {
+//            Set<String> businessIds = new HashSet<String>();
+//            Set<String> categories = new HashSet<String>();
+//            yelpBusinesses = BusinessExtractor.getBusinesses(yelpBusinessFile, city, businessIds, categories, businessTemp);
+//            Set<String> userIds = new HashSet<String>();
+//            SentimentCal.init();
+//            GenW2V.generate(w2vFile);
+//            yelpReviews = ReviewExtractor.getReviews(yelpReviewFile, userIds, businessIds, categories, reviewTemp);
+//            yelpUsers = UserExtractor.getUsers(yelpUserFile, userIds, userTemp);
+//            yelpCategories = new ArrayList(categories);
+//            categoryJsonParsor(yelpCategories, categoryTemp);
+//        } else {
+//            preprocessFromFile();
+//        }
+        preprocessFromFile();
         System.out.println("Preprocessing completed");
         setUpGlobals();
         System.out.println("Globals set up");
@@ -77,8 +98,8 @@ public class Preprossor {
         Globals.U = yelpUsers.size();
         Globals.I = yelpBusinesses.size();
         Globals.RV = yelpReviews.size();
-        Globals.K = 30;
-        Globals.V = 30;
+//        Globals.K = 20;
+//        Globals.V = 30;
         Globals.R = 6;
         Globals.L = 2;
         Globals.X = 3;

@@ -6,7 +6,7 @@ import java.util.HashMap;
 /**
  * Created by RexZhang on 4/10/17.
  */
-public class User {
+public class User implements java.io.Serializable {
 
     public int id;
     public String hashId;

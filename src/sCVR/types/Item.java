@@ -5,7 +5,7 @@ import java.util.ArrayList;
 /**
  * Created by RexZhang on 4/10/17.
  */
-public class Item {
+public class Item implements java.io.Serializable {
     // for an item i
     public int id;
     public String hashId;

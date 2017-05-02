@@ -5,7 +5,7 @@ import java.util.HashMap;
 /**
  * Created by RexZhang on 4/10/17.
  */
-public class Word {
+public class Word implements java.io.Serializable {
 
     public int id;
     public String word;

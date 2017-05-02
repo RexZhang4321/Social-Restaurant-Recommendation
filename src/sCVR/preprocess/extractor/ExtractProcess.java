@@ -17,10 +17,10 @@ import sCVR.preprocess.word2vec.CalW2V;
 import sCVR.preprocess.word2vec.GenW2V;
 
 public class ExtractProcess {
-    private static String yelpBusinessFile = "/Users/Dylan/Downloads/yelp_dataset_challenge_round9/yelp_academic_dataset_business.json";
-    private static String yelpUserFile = "/Users/Dylan/Downloads/yelp_dataset_challenge_round9/yelp_academic_dataset_user.json";
-    private static String yelpReviewFile = "/Users/Dylan/Downloads/yelp_dataset_challenge_round9/yelp_academic_dataset_review.json";
-    private static String w2vFile = "/Users/Dylan/Downloads/glove.6B/glove.6B.50d.txt";
+    private static String yelpBusinessFile = "./yelp_academic_dataset_business.json";
+    private static String yelpUserFile = "./yelp_academic_dataset_user.json";
+    private static String yelpReviewFile = "./yelp_academic_dataset_review.json";
+    private static String w2vFile = "./glove.6B.50d.txt";
 
     private static List<YelpReview> yelpReviews;
     private static List<YelpUser> yelpUsers;

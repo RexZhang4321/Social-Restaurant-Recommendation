@@ -6,7 +6,7 @@ import java.util.HashMap;
 /**
  * Created by RexZhang on 4/10/17.
  */
-public class Review {
+public class Review implements java.io.Serializable {
     // for a user review d
 
     public int id;

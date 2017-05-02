@@ -3,7 +3,7 @@ package sCVR.types;
 /**
  * Created by RexZhang on 4/10/17.
  */
-public class Viewpoint {
+public class Viewpoint implements java.io.Serializable {
 
     public int id;
 

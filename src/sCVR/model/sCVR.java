@@ -4,9 +4,14 @@ import org.joda.time.LocalDateTime;
 import sCVR.types.*;
 import sCVR.Utils;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.IntStream;
 
 /**
  * Created by RexZhang on 4/10/17.
@@ -16,10 +21,10 @@ public class sCVR {
     private Random rnd;
     private final static long seed = 0;
 
-    private double alpha = 0.01;
-    private double sigma = 0.01;
-    private double chi = 0.01;
-    private double beta = 0.01;
+    private double alpha = 0.05;
+    private double sigma = 0.05;
+    private double chi = 0.05;
+    private double beta = 0.05;
     private double tau[] = {0.3, 0.4, 0.3};
     private double eta[] = {0.5, 0.5};
 
@@ -50,7 +55,39 @@ public class sCVR {
     /* -------------- Gibbs Sampling Variables End------------ */
 
     public sCVR() {
+        readConfig();
+        System.out.println("Current parameter set:\n" +
+                "alpha: " + alpha + "\n" +
+                "sigma: " + sigma + "\n" +
+                "chi: " + chi + "\n" +
+                "beta: " + beta + "\n" +
+                "tau: " + tau[0] + ", " + tau[1] + ", " + tau[2] + "\n" +
+                "eta: " + eta[0] + ", " + eta[1] + "\n" +
+                "number of viewpoints: " + Globals.V + "\n" +
+                "number of topics: " + Globals.K
+        );
         init();
+    }
+
+    private void readConfig() {
+        try {
+            Properties properties = new Properties();
+            FileInputStream in = new FileInputStream("config.txt");
+            properties.load(in);
+            in.close();
+            alpha = Double.parseDouble(properties.getProperty("ALPHA"));
+            sigma = Double.parseDouble(properties.getProperty("SIGMA"));
+            chi = Double.parseDouble(properties.getProperty("CHI"));
+            beta = Double.parseDouble(properties.getProperty("BETA"));
+            for (int i = 0; i < tau.length; i++) {
+                tau[i] = Double.parseDouble(properties.getProperty("TAU_" + i));
+            }
+            for (int i = 0; i < eta.length; i++) {
+                eta[i] = Double.parseDouble(properties.getProperty("ETA_" + i));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void init() {
@@ -154,7 +191,7 @@ public class sCVR {
     private void doEStep() {
         double p_V[] = new double[Globals.V];
         for (User user : Globals.users) {
-
+            // TODO not sure whether we should calculate this once per iteration or we just calculate it at the very beginning
             // Compute Eq.4 to get the updated user-rating-viewpoint distribution
             // Since for current user, we only need to update his thetaUserRatingViewpoint once with his social relation
             // we assume trusted value is either 1 or 0
@@ -263,6 +300,7 @@ public class sCVR {
                     oldReviewViewpoint.nTopicInViewpointSum--;
                 }
 
+                // TODO: may need to convert to log space
                 for (int v = 0; v < Globals.V; v++) {
                     Viewpoint curVP = Globals.viewpoints[v];
                     double viewpointPart = (item.nReviewViewpointInItem[v] + item.nRatingViewpointInItem[v] + alpha) /
@@ -467,6 +505,98 @@ public class sCVR {
         }
         for (int i = 0; i < p.length; i++) {
             System.out.println("Prob@" + i + ": " + p[i]);
+        }
+    }
+
+    public void collectStats() {
+        ArrayList<HashMap<String, Integer>> topicVSword = new ArrayList<HashMap<String, Integer>>();
+        int[][] conceptVStopic = new int[Globals.E][Globals.K];
+        for (int i = 0; i < Globals.K; i++) {
+            topicVSword.add(new HashMap<String, Integer>());
+        }
+        for (User user : Globals.users) {
+            for (Review review : user.reviews) {
+                for (Word word : review.words){
+                    int tid = word.topic.id;
+                    if (topicVSword.get(tid).containsKey(word.word)) {
+                        int n = topicVSword.get(tid).get(word.word);
+                        topicVSword.get(tid).put(word.word, ++n);
+                    } else {
+                        topicVSword.get(tid).put(word.word, 1);
+                    }
+                    conceptVStopic[review.concept.id][tid]++;
+                }
+            }
+        }
+        for (int i = 0; i < Globals.K; i++) {
+            int maxloop = 20;
+            System.out.print("Topic #" + i + ": ");
+            for (String w: topicVSword.get(i).keySet()) {
+                System.out.print(w + ", ");
+                if (maxloop < 0) {
+                    break;
+                } else {
+                    maxloop--;
+                }
+            }
+            System.out.println();
+        }
+        for (int i = 0 ; i < Globals.E; i++) {
+            System.out.print(Globals.concepts[i].concept + ": ");
+            int maxidx = 0;
+            int maxval = Integer.MIN_VALUE;
+            for (int j = 0; j < conceptVStopic[i].length; j++) {
+                if (conceptVStopic[i][j] > maxval) {
+                    maxidx = j;
+                    maxval = conceptVStopic[i][j];
+                }
+            }
+            int maxloop = 20;
+            for (String w : topicVSword.get(maxidx).keySet()) {
+                System.out.print(w + ", ");
+                if (maxloop < 0) {
+                    break;
+                } else {
+                    maxloop--;
+                }
+            }
+            System.out.println();
+        }
+    }
+
+    public void saveModel() {
+        try {
+            FileOutputStream fos = new FileOutputStream("users.dump");
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            oos.writeObject(Globals.users);
+            oos.close();
+            fos.close();
+
+            fos = new FileOutputStream("pi.dump");
+            oos = new ObjectOutputStream(fos);
+            oos.writeObject(pi);
+            oos.close();
+            fos.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void readModel() {
+        try {
+            FileInputStream fis = new FileInputStream("users.dump");
+            ObjectInputStream ois = new ObjectInputStream(fis);
+            Globals.users = (User[]) ois.readObject();
+            ois.close();
+            fis.close();
+
+            fis = new FileInputStream("pi.dump");
+            ois = new ObjectInputStream(fis);
+            pi = (double[][]) ois.readObject();
+            ois.close();
+            fis.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
