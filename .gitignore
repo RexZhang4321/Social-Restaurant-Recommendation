@@ -6,6 +6,7 @@
 target
 data
 *.json
+*.dump
 *DS_Store*
 #Social-Restaurant-Recommendation.iml
 ### JetBrains template

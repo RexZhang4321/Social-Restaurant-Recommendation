@@ -162,7 +162,11 @@ public class Preprossor {
             Item item = new Item();
             item.id = items.size();
             item.hashId = yelpBusiness.getBusiness_id();
-            item.category = conceptHm.get(yelpBusiness.getCategories().get(0));
+            try {
+                item.category = conceptHm.get(yelpBusiness.getCategories().get(0));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             itemHm.put(item.hashId, item.id);
             items.add(item);
         }

@@ -54,6 +54,13 @@ public class sCVR {
 
     /* -------------- Gibbs Sampling Variables End------------ */
 
+    // for prediction
+    public static double[][][] userThetaRatingViewpoint;
+
+    public static HashMap<Concept, Topic> conceptTopicHashMap;
+
+    HashMap<Topic, String[]> topicWordsHashMap;
+
     public sCVR() {
         readConfig();
         System.out.println("Current parameter set:\n" +
@@ -450,9 +457,6 @@ public class sCVR {
         // re-estimate theta
         double sumFriendsInfluence = 0.0;
         for (int u = 0; u < Globals.U; u++) {
-            if (u == 25) {
-                System.out.println("warn");
-            }
             for (int r = 0; r < Globals.R; r++) {
                 for (int v = 0; v < Globals.V; v++) {
                     User curUser = Globals.users[u];
@@ -461,7 +465,7 @@ public class sCVR {
                     sumFriendsInfluence = 0.0;
                     for (User f : friends) {
                         /* assume User.trustValueU0U1.get(u).get(f.id) == 1 if there is a relationship*/
-                        sumFriendsInfluence += 1.0 / nFriends * f.thetaRatingViewpoint[r][v] / nFriends;
+                        sumFriendsInfluence += 1.0 * f.thetaRatingViewpoint[r][v] / nFriends;
                     }
                     sumFriendsInfluence += curUser.theta0RatingViewpoint[r][v];
                     curUser.thetaRatingViewpoint[r][v] = (Globals.viewpoints[v].nRatingViewpointsForRating[u][r] + sumFriendsInfluence) /
@@ -480,7 +484,7 @@ public class sCVR {
         // it is not necessary to update fai, mew or lambda
 
         // maximize baseTheta from Eq.9
-        /*
+        int zeros = 0;
         for (User u : Globals.users) {
             for (int r = 0; r < Globals.R; r++) {
                 double numerator = 0.0;
@@ -490,13 +494,16 @@ public class sCVR {
                     denominator += Utils.digamma(v.nRatingViewpointsForRatingSum[u.id] + u.nAllItemRatings * u.thetaRatingViewpoint[r][v.id]) - Utils.digamma(u.nAllItemRatings * u.thetaRatingViewpoint[r][v.id]);
                 }
                 double tmp = (numerator) / (denominator);
+                if (tmp == 0) {
+                    zeros++;
+                    continue;
+                }
                 for (int v = 0; v < Globals.V; v++) {
                     u.theta0RatingViewpoint[r][v] = u.theta0RatingViewpoint[r][v] * tmp;
                 }
             }
         }
-        */
-
+        System.out.println(zeros + " updates on base distribution skipped.");
     }
 
     public int predict(int uid, int iid, boolean show) {
@@ -504,7 +511,7 @@ public class sCVR {
         double p[] = new double[Globals.R];
         for (int r = 0; r < Globals.R; r++) {
             for (int v = 0; v < Globals.V; v++) {
-                p[r] += user.thetaRatingViewpoint[r][v] * pi[iid][v];
+                p[r] += userThetaRatingViewpoint[uid][r][v] * pi[iid][v];
             }
         }
         int maxidx = 2;
@@ -521,11 +528,10 @@ public class sCVR {
         return maxidx;
     }
 
-    public void recommendForUser(int uid, HashMap<Concept, Topic> conceptTopicHashMap, HashMap<Topic, String[]> topicWordsHashMap) {
-        User user = Globals.users[uid];
-        PriorityQueue<Pair<Item, Integer>> heap = new PriorityQueue<>(new Comparator<Pair<Item, Integer>>() {
+    public void recommendForUser(int uid) {
+        PriorityQueue<Pair<Integer, Integer>> heap = new PriorityQueue<>(new Comparator<Pair<Integer, Integer>>() {
             @Override
-            public int compare(Pair<Item, Integer> o1, Pair<Item, Integer> o2) {
+            public int compare(Pair<Integer, Integer> o1, Pair<Integer, Integer> o2) {
                 if (o1.getValue() > o2.getValue()) {
                     return 1;
                 } else {
@@ -533,20 +539,14 @@ public class sCVR {
                 }
             }
         });
-        HashSet<Item> usedItem = new HashSet<>();
-        for (Review review : user.reviews) {
-            usedItem.add(review.item);
-        }
-        for (Item item : Globals.items) {
-            if (!usedItem.contains(item)) {
-                int rating = predict(uid, item.id, false);
-                heap.add(new Pair<>(item, rating));
-            }
+        for (int iid = 0; iid < Globals.I; iid++) {
+            int rating = predict(uid, iid, false);
+            heap.add(new Pair<>(iid, rating));
         }
         System.out.println("For user " + uid);
         for (int i = 0; i < 5; i++) {
-            Pair<Item, Integer> tmp = heap.poll();
-            System.out.println("Item " + tmp.getKey().id + " , predicting rating: " + tmp.getValue());
+            Pair<Integer, Integer> tmp = heap.poll();
+            System.out.println("Item " + tmp.getKey() + " , predicting rating: " + tmp.getValue());
             // from rating get viewpoint
             int vp = 0;
             double vpval = 0.0;
@@ -595,8 +595,10 @@ public class sCVR {
         System.out.println("MAE: " + MAE);
     }
 
-    public void collectStats(HashMap<Concept, Topic> conceptTopicHashMap, HashMap<Topic, String[]> topicWordsHashMap) {
+    public void collectStats() {
         rnd = new Random(0);
+        conceptTopicHashMap = new HashMap<>();
+        topicWordsHashMap = new HashMap<>();
         ArrayList<HashMap<String, Integer>> topicVSword = new ArrayList<>();
         int[][] conceptVStopic = new int[Globals.E][Globals.K];
         for (int i = 0; i < Globals.K; i++) {
@@ -661,16 +663,37 @@ public class sCVR {
     }
 
     public void saveModel() {
+        collectStats();
         try {
-            FileOutputStream fos = new FileOutputStream("users.dump");
+            Properties properties = new Properties();
+            FileInputStream in = new FileInputStream("config.txt");
+            properties.load(in);
+            in.close();
+            FileOutputStream fos = new FileOutputStream(properties.getProperty("USER_DUMP"));
             ObjectOutputStream oos = new ObjectOutputStream(fos);
-            oos.writeObject(Globals.users);
+            userThetaRatingViewpoint = new double[Globals.U][Globals.R][Globals.V];
+            for (User user : Globals.users) {
+                userThetaRatingViewpoint[user.id] = user.thetaRatingViewpoint;
+            }
+            oos.writeObject(userThetaRatingViewpoint);
             oos.close();
             fos.close();
 
-            fos = new FileOutputStream("pi.dump");
+            fos = new FileOutputStream(properties.getProperty("PI_DUMP"));
             oos = new ObjectOutputStream(fos);
             oos.writeObject(pi);
+            oos.close();
+            fos.close();
+
+            fos = new FileOutputStream(properties.getProperty("CONCEPT_TOPIC_HM"));
+            oos = new ObjectOutputStream(fos);
+            oos.writeObject(conceptTopicHashMap);
+            oos.close();
+            fos.close();
+
+            fos = new FileOutputStream(properties.getProperty("TOPIC_WORDS_HM"));
+            oos = new ObjectOutputStream(fos);
+            oos.writeObject(topicWordsHashMap);
             oos.close();
             fos.close();
         } catch (Exception e) {
@@ -680,20 +703,37 @@ public class sCVR {
 
     public void readModel() {
         try {
-            FileInputStream fis = new FileInputStream("users.dump");
+            Properties properties = new Properties();
+            FileInputStream in = new FileInputStream("config.txt");
+            properties.load(in);
+            in.close();
+            FileInputStream fis = new FileInputStream(properties.getProperty("USER_DUMP"));
             ObjectInputStream ois = new ObjectInputStream(fis);
-            Globals.users = (User[]) ois.readObject();
+            userThetaRatingViewpoint = (double[][][]) ois.readObject();
+            fis.close();
+            ois.close();
+
+            fis = new FileInputStream(properties.getProperty("PI_DUMP"));
+            ois = new ObjectInputStream(fis);
+            pi = (double[][]) ois.readObject();
             ois.close();
             fis.close();
 
-            fis = new FileInputStream("pi.dump");
+            fis = new FileInputStream(properties.getProperty("CONCEPT_TOPIC_HM"));
             ois = new ObjectInputStream(fis);
-            pi = (double[][]) ois.readObject();
+            conceptTopicHashMap = (HashMap<Concept, Topic>) ois.readObject();
+            ois.close();
+            fis.close();
+
+            fis = new FileInputStream(properties.getProperty("TOPIC_WORDS_HM"));
+            ois = new ObjectInputStream(fis);
+            topicWordsHashMap = (HashMap<Topic, String[]>) ois.readObject();
             ois.close();
             fis.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
+        collectStats();
     }
 
 }
